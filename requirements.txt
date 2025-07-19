@@ -1,0 +1,10 @@
+opencv_python
+numpy
+astropy
+pyside6==6.9.0
+pyqtgraph
+PyYAML
+scipy
+requests
+scikit-image
+
