@@ -36,7 +36,7 @@ jobs:
 
       - name: Verify build exists (Linux, bash)
         run: |
-          if [ ! -f "inti_partner/inti_partner/dist/INTI_Partner.exe" ]; then
+          if [ ! -f "dist/inti_partner/INTI_Partner.exe" ]; then
             echo "Erreur : fichier .exe non trouvé"
             exit 1
           fi
@@ -45,4 +45,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: INTI_Partner-linux
-          path: inti_partner/inti_partner/dist/
+          path: dist/inti_partner/
