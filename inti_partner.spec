@@ -1,6 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 block_cipher=None
 
+import os
+base_path = os.path.abspath(os.path.dirname(__file__))
+icon_path = os.path.join(base_path, 'intipartner.ico')
+
 a = Analysis(
     ['inti_partner.py'],
     pathex=[],
@@ -8,7 +12,8 @@ a = Analysis(
     datas=[('inti_partner.ui','.'),('intipartner_icon.png','.'),('inti_partner_EN.qm','.'),
 	('sun_spectre_color.png','.'),('sun_spectre_annot_V2.png','.'), ('sun_spectre.png','.'),
 	('img_qt.ui','.'),('gong.ui','.'),('infos_txt.ui','.'),('earth.png','.'),
-	('matplotlib_cache/fontlist-v330.json', 'matplotlib_cache')],
+	('matplotlib_cache/fontlist-v330.json', 'matplotlib_cache'),
+	('matplotlib_cache/fontlist-v390.json', 'matplotlib_cache')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -29,7 +34,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True, icon="C:\\Users\\valer\\codepy\\inti_partner\\intipartner.ico",
+    console=True, icon=icon_path,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
