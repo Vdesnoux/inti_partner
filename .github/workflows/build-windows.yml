@@ -1,0 +1,36 @@
+name: Build Windows Executable (onedir)
+
+on:
+  workflow_dispatch:  # ⬅️ permet de lancer manuellement
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller (.spec)
+        run: pyinstaller inti_partner.spec
+
+      - name: Check EXE exists
+        run: |
+          if not exist dist\\INTI_Partner\\INTI_Partner.exe exit 1
+
+      - name: Upload Windows onedir build
+        uses: actions/upload-artifact@v4
+        with:
+          name: INTI_Partner-windows
+          path: dist/INTI_Partner/
