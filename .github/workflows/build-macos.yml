@@ -33,15 +33,14 @@ jobs:
       - name: Build with PyInstaller (.spec)
         run: pyinstaller inti_partner.spec
 
-      - name: Vérifier que le fichier a été généré
-        run: |
-          import sys
-          import os
-          if not os.path.exists("dist/INTI_Partner/INTI_Partner.exe"):
-              sys.exit(1)
-        shell: python
 
-      - name: Upload Linux onedir build
+      - name: Verify build exists (macOS, bash)
+        run: |
+          if [ ! -f "dist/INTI_Partner/INTI_Partner" ]; then
+            exit 1
+          fi
+
+      - name: Upload MacOs onedir build
         uses: actions/upload-artifact@v4
         with:
           name: INTI_Partner-macos
