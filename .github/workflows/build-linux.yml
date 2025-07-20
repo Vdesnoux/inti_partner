@@ -34,10 +34,10 @@ jobs:
         run: pyinstaller inti_partner.spec
 
       - name: Liste les fichiers générés
-        run: ls -lh dist/inti_partner/
+        run: ls -lh dist/INTI_Partner/
 
       - name: Upload linux onedir build
         uses: actions/upload-artifact@v4
         with:
           name: INTI_Partner-linux
-          path: dist/inti_partner/
+          path: dist/INTI_Partner/
