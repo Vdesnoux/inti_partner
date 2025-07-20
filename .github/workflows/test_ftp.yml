@@ -1,0 +1,18 @@
+name: Test FTP Connection on Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ftp-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Create FTP command file
+        run: |
+          echo open ${{ secrets.FTP_HOST }} > ftp.txt
+          echo user ${{ secrets.FTP_USERNAME }} ${{ secrets.FTP_PASSWORD }} >> ftp.txt
+          echo ls >> ftp.txt
+          echo bye >> ftp.txt
+
+      - name: Run FTP command
+        run: ftp -n -s:ftp.txt

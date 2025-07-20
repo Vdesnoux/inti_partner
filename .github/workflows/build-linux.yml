@@ -1,11 +1,11 @@
-name: Build Windows Executable (onedir)
+name: Build linux Executable (onedir)
 
 on:
   workflow_dispatch:  # ⬅️ permet de lancer manuellement
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -41,24 +41,8 @@ jobs:
               sys.exit(1)
         shell: python
 
-      - name: Upload Windows onedir build
+      - name: Upload linux onedir build
         uses: actions/upload-artifact@v4
         with:
-          name: INTI_Partner-windows
+          name: INTI_Partner-linux
           path: dist/INTI_Partner/
-      
-      #- name: Compresser le dossier dist\INTI_Partner (Windows)
-      #  shell: pwsh
-      #  run: |
-      #    Compress-Archive -Path 'dist\INTI_Partner\*' -DestinationPath 'inti_partner.zip'
-
-
-      #- name: Upload ZIP to FTP
-      # uses: SamKirkland/FTP-Deploy-Action@4.3.0
-      #  with:
-      #    server: ${{ secrets.FTP_HOST }}
-      #    username: ${{ secrets.FTP_USERNAME }}
-      #    password: ${{ secrets.FTP_PASSWORD }}
-      #    local-dir: ./
-      #    remote-dir: ${{ secrets.FTP_REMOTE_DIR }}
-      #    include: inti_partner.zip
