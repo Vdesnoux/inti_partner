@@ -36,7 +36,8 @@ jobs:
 
       - name: Verify build exists (Linux, bash)
         run: |
-          if [ ! -f "inti_partner/inti_partner/dist" ]; then
+          if [ ! -f "inti_partner/inti_partner/dist/INTI_Partner.exe" ]; then
+            echo "Erreur : fichier .exe non trouvé"
             exit 1
           fi
 
