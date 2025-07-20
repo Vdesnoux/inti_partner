@@ -46,3 +46,19 @@ jobs:
         with:
           name: INTI_Partner-windows
           path: dist/INTI_Partner/
+      
+      - name: Compresser le dossier dist\INTI_Partner (Windows)
+        shell: pwsh
+        run: |
+          Compress-Archive -Path 'dist\INTI_Partner\*' -DestinationPath 'inti_partner.zip'
+
+
+      - name: Upload ZIP to FTP
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          remote-dir: ${{ secrets.FTP_REMOTE_DIR }}
+          include: inti_partner.zip
