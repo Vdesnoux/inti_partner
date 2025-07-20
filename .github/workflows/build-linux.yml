@@ -33,16 +33,11 @@ jobs:
       - name: Build with PyInstaller (.spec)
         run: pyinstaller inti_partner.spec
 
-
-      - name: Verify build exists (Linux, bash)
-        run: |
-          if [ ! -f "dist/inti_partner/INTI_Partner.exe" ]; then
-            echo "Erreur : fichier .exe non trouvé"
-            exit 1
-          fi
+      - name: Liste les fichiers générés
+        run: ls -lh inti_partner/inti_partner/dist/
 
       - name: Upload linux onedir build
         uses: actions/upload-artifact@v4
         with:
           name: INTI_Partner-linux
-          path: dist/inti_partner/
+          path: inti_partner/inti_partner/dist/
