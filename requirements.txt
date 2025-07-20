@@ -9,4 +9,4 @@ pillow
 matplotlib
 scipy
 scikit-image
-matplotlib
+
