@@ -33,9 +33,13 @@ jobs:
       - name: Build with PyInstaller (.spec)
         run: pyinstaller inti_partner.spec
 
-      - name: Check EXE exists
+      - name: Vérifier que le fichier a été généré
         run: |
-          if not exist dist\\INTI_Partner\\INTI_Partner.exe exit 1
+          import sys
+          import os
+          if not os.path.exists("dist/INTI_Partner/INTI_Partner.exe"):
+              sys.exit(1)
+        shell: python
 
       - name: Upload Windows onedir build
         uses: actions/upload-artifact@v4
