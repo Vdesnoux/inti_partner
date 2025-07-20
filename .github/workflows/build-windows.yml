@@ -22,8 +22,13 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
           
-      - run: |
-          rm -rf build dist
+      - name: Clean build and dist folders
+        run: |
+          import shutil
+          shutil.rmtree('build', ignore_errors=True)
+          shutil.rmtree('dist', ignore_errors=True)
+          shutil.rmtree('__pycache__', ignore_errors=True)
+        shell: python
 
       - name: Build with PyInstaller (.spec)
         run: pyinstaller inti_partner.spec
