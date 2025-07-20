@@ -2,7 +2,7 @@
 block_cipher=None
 
 import os
-base_path = os.path.abspath(os.path.dirname(__file__))
+base_path = os.getcwd()
 icon_path = os.path.join(base_path, 'intipartner.ico')
 
 a = Analysis(

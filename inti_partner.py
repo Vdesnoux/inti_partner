@@ -68,13 +68,14 @@ Version 0.5 - 31 mai 2025
 - met les fichiers st dans un repetoire stack
 - ajout annotations distance et terre
 
-Version 0.6a - 17 juillet 2025
+Version 0.7 - 17 juillet 2025
 - ajout label Terre
 - gestion repertoire clahe pour trouver cont en stack et animation
 - affichage gong comme inti
 - sous-repertoire anim
 - fond presque noir pour image grille
 - annotations dans le prolongement des arc de cercles
+- ajout de selection _free dans stack, proc, grille etc
 """
 
 
@@ -617,8 +618,10 @@ class main_wnd_UI(QMainWindow) :
         dialog.setNameFilters([ "Fichiers png (*.png)",
             "Fichiers protus (*_protu*.png)",
             "Fichiers clahe (*_clahe.png)",
+            "Fichiers free (*_free.png)",
             "Fichiers raw (*_raw.png)",
-            "Fichiers _recon (*_recon*.fits)",
+            "Fichiers _recon fits (*_recon*.fits)",
+            "Fichiers _free fits (*_free.fits)",
             "Fichiers fits (*.fits)",
             "Fichiers ser (*.ser)",
             "Fichiers tiff (*.tiff)"
@@ -951,7 +954,7 @@ class main_wnd_UI(QMainWindow) :
         self.file_list=[]
         self.ui.stack_image_view.clear()
         #file_list = QFileDialog.getOpenFileNames(self, "Selectionner Imges", self.stack_dir, "Fichiers png (*.png);; Fichiers FITS (*.fits *.fit);;Tous les fichiers (*)")
-        file_list = QFileDialog.getOpenFileNames(self,self.tr( "Selectionner Images"), self.stack_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers clahe png (*_clahe.png);;Fichiers fits (*_recon.fits);;Fichiers fits (*_free.fits);;Fichiers fits (*.fits)"), self.pattern)
+        file_list = QFileDialog.getOpenFileNames(self,self.tr( "Selectionner Images"), self.stack_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers clahe png (*_clahe.png);;Fichiers free (*_free.png);;Fichiers recon fits (*_recon.fits);;Fichiers free fits (*_free.fits);;Fichiers fits (*.fits)"), self.pattern)
         self.pattern = file_list[1]
         
         if len(file_list[0]) !=0  :
@@ -2025,7 +2028,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.anim_stacked_widget.setCurrentIndex(0)
         file_list=[]
         self.ui.anim_image_view.clear()
-        file_list = anim_file_dialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus (*_protus.png);;Fichiers clahe png (*_clahe.png);;Tous les fichiers (*)"),self.pattern)
+        file_list = anim_file_dialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus (*_protus.png);;Fichiers clahe png (*_clahe.png);;Fichiers free (*_free.png);;Tous les fichiers (*)"),self.pattern)
         self.pattern = file_list[1]
         if len(file_list[0]) != 0 :
             self.ui.anim_list.clear()
@@ -2044,7 +2047,7 @@ class main_wnd_UI(QMainWindow) :
 
     def anim_add_img (self):
         file_add_list=[]
-        file_add_list = QFileDialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus (*_protus.png);;Tous les fichiers (*)"), self.pattern)
+        file_add_list = QFileDialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus (*_protus.png);;Fichiers clahe (*_clahe.png);;Fichiers free (*_free.png);;Tous les fichiers (*)"), self.pattern)
         file_add_list=file_add_list[0]
         self.file_list.extend (file_add_list)
         file_add_names=[]
@@ -2898,7 +2901,7 @@ class main_wnd_UI(QMainWindow) :
     
     def proc_open (self) :
         self.file_proc =''
-        file_proc = QFileDialog.getOpenFileName(self, "Selectionner image ", self.working_dir, "Tous les fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus png (*_protus.png);;Fichiers clahe png (*_clahe.png);;Fichiers fits (*.fits)",self.pattern)
+        file_proc = QFileDialog.getOpenFileName(self, "Selectionner image ", self.working_dir, "Tous les fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus png (*_protus.png);;Fichiers clahe png (*_clahe.png);;Fichiers free (*_free.png);;Fichiers recon fits (*_recon*.fits);;Fichiers free fits (*_free.fits);;Fichiers cont fits (*_cont*.fits);;Fichiers fits (*.fits)",self.pattern)
         self.pattern = file_proc[1]
         if file_proc[0] != '' :
             self.file_proc=file_proc[0]
