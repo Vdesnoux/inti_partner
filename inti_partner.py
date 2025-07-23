@@ -1499,7 +1499,8 @@ class main_wnd_UI(QMainWindow) :
         if app_tab=='SER' :
             pos=ev.pos()
             try :
-                self.ui.ser_raw_view.view.removeItem(self.mypoint)
+                if self.mypoint.scene() is  self.ui.ser_raw_view.getView().scene() :
+                    self.ui.ser_raw_view.view.removeItem(self.mypoint)
             except :
                 pass
             if self.ui.ser_view.imageItem.sceneBoundingRect().contains(pos) :
@@ -1512,7 +1513,7 @@ class main_wnd_UI(QMainWindow) :
                 if self.flag_raw :
                     # point rouge
                     self.mypoint=QGraphicsEllipseItem(0,0,6,6)
-                    self.mypoint.setPen(pg.mkPen(color=(250, 0, 0), width=12))
+                    self.mypoint.setPen(pg.mkPen(color=(250, 120, 0), width=12))
                     self.mypoint.setPos(self.ui.ser_view.currentIndex-3, x-3)
                     self.ui.ser_raw_view.view.addItem(self.mypoint)  
                 
@@ -1535,7 +1536,8 @@ class main_wnd_UI(QMainWindow) :
                 # affiche ligne verticale sur le fichier ser
                 #x1, y1, x2, y2
                 try :
-                    self.ui.ser_view.view.removeItem(self.myline)  
+                    if self.myline.scene() is  self.ui.ser_view.getView().scene() :
+                        self.ui.ser_view.view.removeItem(self.myline)  
                 except :
                     pass
                 self.myline=QGraphicsLineItem(x,0,x,ih)
@@ -2148,8 +2150,9 @@ class main_wnd_UI(QMainWindow) :
         
     def anim_roi(self) :
         if self.myROI :
-            self.ui.anim_image_view.removeItem(self.myROI)
-            self.myROI=[]
+            if self.myROI.scene() is  self.ui.anim_image_view.getView().scene() :
+                self.ui.anim_image_view.removeItem(self.myROI)
+                self.myROI=[]
         else :
             iw= self.ui.anim_image_view.image.shape[0]//2
             ih=self.ui.anim_image_view.image.shape[1]//2
@@ -2517,8 +2520,9 @@ class main_wnd_UI(QMainWindow) :
         # zone spectre couleur
         ratio=self.map_color_iw/self.map_ih
         try :
-            self.ui.map_image_color_view.removeItem(self.lineA)
-            self.ui.map_image_color_view.removeItem(self.lineB)
+            if self.lineA.scene() is  self.ui.map_image_color_view.getView().scene() :
+                self.ui.map_image_color_view.removeItem(self.lineA)
+                self.ui.map_image_color_view.removeItem(self.lineB)
         except :
             pass
         self.lineA=QGraphicsLineItem(startY*ratio, 0,startY*ratio, self.map_color_ih)
@@ -2795,7 +2799,8 @@ class main_wnd_UI(QMainWindow) :
     
     def ser_frame_changed (self) :
         try :
-            self.ui.ser_view.view.removeItem(self.myline)  
+            if self.myline.scene() is  self.ui.ser_view.getView().scene() :
+                self.ui.ser_view.view.removeItem(self.myline)  
         except :
             pass
         #print(self.ui.ser_view.currentIndex)
@@ -2818,6 +2823,11 @@ class main_wnd_UI(QMainWindow) :
         if self.flag_raw :
             self.v_bar.label.setFormat("{:0.0f}".format(self.v_bar.value()))
             self.ui.ser_view.setCurrentIndex(int(self.v_bar.value()))
+            try :
+                if self.mypoint.scene() is self.ui.ser_raw_view.getView().scene():
+                    self.ui.ser_raw_view.view.removeItem(self.mypoint)
+            except :
+                pass
     
     def ser_posx_prev (self) :
         x=self.ser_posx - 1
@@ -2830,12 +2840,13 @@ class main_wnd_UI(QMainWindow) :
         if x>=0 :
             # point rouge
             try : 
+                #if self.mypoint.scene() is  self.ui.ser_view.getView().scene() :
                 self.ui.ser_raw_view.removeItem(self.mypoint)
             except :
                 pass
             if self.flag_raw :
                 self.mypoint=QGraphicsEllipseItem(0,0,6,6)
-                self.mypoint.setPen(pg.mkPen(color=(250, 0, 0), width=12))
+                self.mypoint.setPen(pg.mkPen(color=(250, 120, 0), width=12))
                 self.mypoint.setPos(self.ui.ser_view.currentIndex-3, x-3)
                 self.ui.ser_raw_view.view.addItem(self.mypoint)  
             
@@ -2850,7 +2861,8 @@ class main_wnd_UI(QMainWindow) :
             self.myplot = self.ui.spectre_view.plot(lamb, profil, pen=pen, name=profile_name, maxTickLength=-100, autoLevels=False)
             # affiche ligne verticale sur le fichier ser
             try :
-                self.ui.ser_view.view.removeItem(self.myline)  
+                if self.myline.scene() is  self.ui.ser_view.getView().scene() :
+                    self.ui.ser_view.view.removeItem(self.myline)  
             except :
                 pass
             self.myline=QGraphicsLineItem(x,0,x,ih)
@@ -2869,12 +2881,13 @@ class main_wnd_UI(QMainWindow) :
         if x<=iw :
             # point rouge
             try : 
+                #if self.mypoint.scene() is  self.ui.ser_view.getView().scene() :
                 self.ui.ser_raw_view.removeItem(self.mypoint)
             except :
                 pass
             if self.flag_raw :
                 self.mypoint=QGraphicsEllipseItem(0,0,6,6)
-                self.mypoint.setPen(pg.mkPen(color=(250, 0, 0), width=12))
+                self.mypoint.setPen(pg.mkPen(color=(250, 120, 0), width=12))
                 self.mypoint.setPos(self.ui.ser_view.currentIndex-3, x-3)
                 self.ui.ser_raw_view.view.addItem(self.mypoint)  
             
@@ -2889,7 +2902,8 @@ class main_wnd_UI(QMainWindow) :
             self.myplot = self.ui.spectre_view.plot(lamb, profil, pen=pen, name=profile_name, maxTickLength=-100, autoLevels=False)
             # affiche ligne verticale sur le fichier ser
             try :
-                self.ui.ser_view.view.removeItem(self.myline)  
+                if self.myline.scene() is  self.ui.ser_view.getView().scene() :
+                    self.ui.ser_view.view.removeItem(self.myline)  
             except :
                 pass
             self.myline=QGraphicsLineItem(x,0,x,ih)
@@ -3143,7 +3157,8 @@ class main_wnd_UI(QMainWindow) :
     def proc_crop_test (self) :
         error=False
         if self.myROI !=[] :
-            self.ui.proc_view.removeItem(self.myROI)
+            if self.myROI.scene() is  self.ui.proc_view.getView().scene() :
+                self.ui.proc_view.removeItem(self.myROI)
         try :
             new_ih=int(self.ui.proc_crop_y_text.text())//2
             new_iw=int(self.ui.proc_crop_x_text.text())//2
@@ -3173,7 +3188,8 @@ class main_wnd_UI(QMainWindow) :
     def proc_crop (self) :
         error=False
         if self.myROI !=[] :
-            self.ui.proc_view.removeItem(self.myROI)
+            if self.myROI.scene() is  self.ui.proc_view.getView().scene() :
+                self.ui.proc_view.removeItem(self.myROI)
             
         try :
             new_ih=int(self.ui.proc_crop_y_text.text())//2
@@ -3306,7 +3322,8 @@ class main_wnd_UI(QMainWindow) :
         try :
             if self.plotitem :
                 for p in self.plotitem :
-                    self.ui.grid_view.view.removeItem(p)
+                    if p.scene() is  self.ui.grid_view.getView().scene() :
+                        self.ui.grid_view.view.removeItem(p)
         except :
             pass
             
@@ -3381,7 +3398,8 @@ class main_wnd_UI(QMainWindow) :
                 
                 if self.plotitem :
                     for p in self.plotitem :
-                        self.ui.grid_view.view.removeItem(p)
+                        if p.scene() is  self.ui.grid_view.getView().scene() :
+                            self.ui.grid_view.view.removeItem(p)
                         
                 iw,ih = self.img_grid.shape[0], self.img_grid.shape[1]
                 
@@ -3708,7 +3726,8 @@ class main_wnd_UI(QMainWindow) :
         try :
             if self.plotitem :
                 for p in self.plotitem :
-                    self.ui.grid_view.view.removeItem(p)
+                    if p.scene() is  self.ui.grid_view.getView().scene() :
+                        self.ui.grid_view.view.removeItem(p)
         except :
             pass
         img=self.img_grid_orig
@@ -3730,7 +3749,8 @@ class main_wnd_UI(QMainWindow) :
     
     def grid_fili_cancel(self):
         for item in self.filigranes:
-            self.ui.grid_view.getView().removeItem(item)
+            if item.scene() is  self.ui.grid_view.getView().scene() :
+                self.ui.grid_view.getView().removeItem(item)
         self.filigranes.clear()
     
     def grid_fili_display(self) :
@@ -4251,13 +4271,13 @@ class img_wnd(QMainWindow) :
                 cv2.imwrite(file_name, myimage)
 
     def read_settings(self):
-        settings=QSettings("Desnoux Buil", "inti_qt")
+        settings=QSettings("Desnoux Buil", "inti_partner")
         self.ui.restoreGeometry(settings.value("ImgWindow/geometry"))
         self.ui.restoreState(settings.value("ImgWindow/windowState"))
     
     def write_settings(self) :
         # sauve settings
-        settings=QSettings("Desnoux Buil", "inti_qt")
+        settings=QSettings("Desnoux Buil", "inti_partner")
         settings.setValue("ImgWindow/geometry", self.ui.saveGeometry())
         settings.setValue("ImgWindow/windowState", self.ui.saveState())
         
