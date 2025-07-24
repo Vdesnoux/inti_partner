@@ -476,8 +476,12 @@ class main_wnd_UI(QMainWindow) :
         self.check_version()
         
         # selectionne tab du tab widget et le widget panel depuis settings app
-        self.ui.tab_main.setCurrentIndex(self.current_tab)
-        self.ui.panelWidget.setCurrentIndex(self.current_tab)
+        try :
+            self.ui.tab_main.setCurrentIndex(self.current_tab)
+            self.ui.panelWidget.setCurrentIndex(self.current_tab)
+        except:
+            self.ui.tab_main.setCurrentIndex(0)
+            self.ui.panelWidget.setCurrentIndex(0)
         self.ui.view_dir_lbl.setText(self.working_dir) 
         self.ui.view_dir2_lbl.setText(self.working_dir)
         self.ui.select_dir_lbl.setText(self.working_dir)
