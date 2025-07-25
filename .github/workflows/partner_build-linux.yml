@@ -48,4 +48,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: inti_partner-linux
-          path: inti_partner_linux.zip
+          path: inti_partner-linux.zip
