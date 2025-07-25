@@ -1,11 +1,11 @@
-name: Build Windows Executable (onedir)
+name: Build MacOs Executable (onedir)
 
 on:
   workflow_dispatch:  # ⬅️ permet de lancer manuellement
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repository
@@ -33,32 +33,32 @@ jobs:
       - name: Build with PyInstaller (.spec)
         run: pyinstaller inti_partner.spec
 
-      - name: Vérifier que le fichier a été généré
-        run: |
-          import sys
-          import os
-          if not os.path.exists("dist/INTI_Partner/INTI_Partner.exe"):
-              sys.exit(1)
-        shell: python
 
-      - name: Upload Windows onedir build
+      - name: Verify build exists (macOS, bash)
+        run: |
+          if [ ! -f "dist/inti_partner/inti_partner" ]; then
+            exit 1
+          fi
+
+      - name: Copier le PDF et le dossier d'exemples
+        run: |
+          cp inti_partner_om_FR.pdf dist/inti_partner/
+
+     - name: Créer le fichier ZIP
+        run: |
+          zip -r inti_partner-macos.zip dist/inti_partner
+          
+      - name: Upload artefact sans zip imbriqué
         uses: actions/upload-artifact@v4
         with:
-          name: INTI_Partner-windows
+          name: inti_partner-macos
+          path: inti_partner-macos.zip
+
+
+
+
+      - name: Upload MacOs onedir build
+        uses: actions/upload-artifact@v4
+        with:
+          name: INTI_Partner-macos
           path: dist/INTI_Partner/
-      
-      #- name: Compresser le dossier dist\INTI_Partner (Windows)
-      #  shell: pwsh
-      #  run: |
-      #    Compress-Archive -Path 'dist\INTI_Partner\*' -DestinationPath 'inti_partner.zip'
-
-
-      #- name: Upload ZIP to FTP
-      # uses: SamKirkland/FTP-Deploy-Action@4.3.0
-      #  with:
-      #    server: ${{ secrets.FTP_HOST }}
-      #    username: ${{ secrets.FTP_USERNAME }}
-      #    password: ${{ secrets.FTP_PASSWORD }}
-      #    local-dir: ./
-      #    remote-dir: ${{ secrets.FTP_REMOTE_DIR }}
-      #    include: inti_partner.zip

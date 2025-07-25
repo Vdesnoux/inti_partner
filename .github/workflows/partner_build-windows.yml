@@ -1,11 +1,11 @@
-name: Build MacOs Executable (onedir)
+name: Build Windows Executable (onedir)
 
 on:
   workflow_dispatch:  # ⬅️ permet de lancer manuellement
 
 jobs:
   build-windows:
-    runs-on: macos-latest
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
@@ -33,15 +33,25 @@ jobs:
       - name: Build with PyInstaller (.spec)
         run: pyinstaller inti_partner.spec
 
-
-      - name: Verify build exists (macOS, bash)
+      - name: Vérifier que le fichier a été généré
         run: |
-          if [ ! -f "dist/INTI_Partner/INTI_Partner" ]; then
-            exit 1
-          fi
+          import sys
+          import os
+          if not os.path.exists("dist/INTI_Partner/INTI_Partner.exe"):
+              sys.exit(1)
+        shell: python
 
-      - name: Upload MacOs onedir build
+      - name: Copier le PDF et le dossier d'exemples
+        run: |
+          copy inti_partner_om_FR.pdf dist\inti_partner\
+
+      - name: Créer le fichier ZIP
+        run: |
+          powershell Compress-Archive -Path dist\inti_partner\* -DestinationPath inti_partner-windows.zip
+          
+      - name: Upload Windows onedir build
         uses: actions/upload-artifact@v4
         with:
-          name: INTI_Partner-macos
-          path: dist/INTI_Partner/
+          name: inti_partner-windows
+          path: dist/inti_partner/
+      
