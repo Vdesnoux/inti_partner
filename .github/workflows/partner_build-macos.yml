@@ -54,11 +54,3 @@ jobs:
           name: inti_partner-macos
           path: inti_partner-macos.zip
 
-
-
-
-      - name: Upload MacOs onedir build
-        uses: actions/upload-artifact@v4
-        with:
-          name: INTI_Partner-macos
-          path: dist/INTI_Partner/
