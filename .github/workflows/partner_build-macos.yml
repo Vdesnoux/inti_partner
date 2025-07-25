@@ -4,7 +4,7 @@ on:
   workflow_dispatch:  # ⬅️ permet de lancer manuellement
 
 jobs:
-  build-windows:
+  build-macos:
     runs-on: macos-latest
 
     steps:
@@ -44,7 +44,7 @@ jobs:
         run: |
           cp inti_partner_om_FR.pdf dist/inti_partner/
 
-     - name: Créer le fichier ZIP
+      - name: Créer le fichier ZIP
         run: |
           zip -r inti_partner-macos.zip dist/inti_partner
           
