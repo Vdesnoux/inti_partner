@@ -1,8 +1,10 @@
 
 """
-Spyder Editor
+Inti_partner
+Author : Valerie Desnoux
 
-This is a temporary script file.
+2025
+
 """
 
 import sys
@@ -13,7 +15,7 @@ from pyqtgraph.exporters import ImageExporter
 from pyqtgraph import ImageView, PlotWidget, LinearRegionItem
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QApplication,QMenu,QGraphicsPathItem, QGraphicsPixmapItem,QMainWindow,QDialog, QDockWidget, QFileDialog,QMessageBox, QTableWidgetItem, QWidget,QGraphicsLineItem, QListWidgetItem, QVBoxLayout,QGraphicsEllipseItem
-from PySide6.QtCore import QFile, QIODevice, Qt, QSettings, QTranslator, QUrl, QRect, Signal, QPoint
+from PySide6.QtCore import QFile, QIODevice, Qt, QSettings, QTimer,QTranslator, QUrl, QRect, Signal, QPoint
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6 import QtGui
@@ -76,17 +78,29 @@ Version 0.7 - 17 juillet 2025
 - fond presque noir pour image grille
 - annotations dans le prolongement des arc de cercles
 - ajout de selection _free dans stack, proc, grille etc
+
+Version 0.8 - Aout 2025
+- remplace ouverture fichiers par ouverture repertoire, plus logique
+- affiche images disk png au lancment si tab viewer est le current tab
+- but fix sur autorange des images dans selector au lancement avec un wait
+- bug fix nom inti.exe
+- ajout changer repertoire INTI
+- ajout infinite line sur ser pour defile profile avec trame et souris
+- ajout d'un saveas trame dans onglet ser
+- ajout correction bandes vert dans magnet
+
 """
 
+# TODO : annot disque partiel
+# TODO : saveas annotation image carré, zoom, juste un coin
 
-# TODO : Attendre mais mettre à zéro le seuil de stacking dans yaml
-# TODO : Check des reove scene messages
-# TODO : test couleur parasols moins blanc
-
-
+# IDEAS: lire infos comme date et heure image, ser
+# IDEAS: lecture ser en memmap 
 # IDEAS: effacer un fichier, effacer tous ser et famille de la racine
 # IDEAS: popup demande de la date, ou du rayon si ne trouve pas le fichier log 
 # IDEAS: prendre rotation en compte dans magnet
+# IDEAS: ajout carte synoptique
+# IDEAS: save png avec seuils
 
 
 
@@ -96,7 +110,7 @@ class main_wnd_UI(QMainWindow) :
         #super().__init__(parent)
         super(main_wnd_UI, self).__init__()
         
-        self.version ="0.7"
+        self.version ="0.8"
         
         #fichier GUI par Qt Designer
         loader = QUiLoader()
@@ -115,6 +129,7 @@ class main_wnd_UI(QMainWindow) :
 
         self.read_settings()
         self.read_ini()
+       
         
         # set icon application
         self.ui.setWindowIcon(QtGui.QIcon(resource_path("intipartner_icon.png")))
@@ -153,11 +168,12 @@ class main_wnd_UI(QMainWindow) :
         self.ui.Exit.clicked.connect(self.exit_clicked)
         self.ui.lang_button.clicked.connect(self.lang_switch_clicked)
         self.ui.version_label.setText("Version : "+self.version)
+        self.ui.tab_main.currentChanged.connect(self.on_tab_changed)
         
         # tab viewer
         # ------------------------------------------------------------------
         # signaux
-        self.ui.view_open_btn.clicked.connect(self.view_open_clicked)
+        #self.ui.view_open_btn.clicked.connect(self.view_open_clicked)
         self.ui.view_dir_open_btn.clicked.connect(self.view_dir_open_clicked)
         self.ui.view_clahe_btn.clicked.connect(lambda: self.view_filtre_clicked("clahe"))
         self.ui.view_protus_btn.clicked.connect(lambda: self.view_filtre_clicked("protus"))
@@ -168,7 +184,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.view_raw_btn.clicked.connect(lambda: self.view_filtre_clicked("raw"))
         self.ui.view_disk_btn.clicked.connect(lambda: self.view_filtre_clicked("disk"))
         self.ui.view_tous_btn.clicked.connect(lambda: self.view_filtre_clicked("tous"))
-        self.ui.view_add_btn.clicked.connect(self.view_add_open_clicked)
+        #self.ui.view_add_btn.clicked.connect(self.view_add_open_clicked)
         self.ui.buttonGroup_2.idClicked.connect(self.view_radio_clicked)
         self.ui.img_list_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.img_list_view.customContextMenuRequested.connect(self.view_open_context_menu)
@@ -365,6 +381,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.ser_view.sigTimeChanged.connect(self.ser_frame_changed)
         self.ui.ser_play_btn.clicked.connect(self.ser_play)
         self.ui.ser_stop_btn.clicked.connect(self.ser_stop)
+        self.ui.ser_saveas_btn.clicked.connect(self.ser_saveas)
         self.ui.ser_view.scene.sigMouseClicked.connect(self.on_mouse_click)
         self.ui.ser_view.scene.sigMouseMoved.connect(self.on_mouse_move)
         self.ui.ser_posx_prev_btn.clicked.connect(self.ser_posx_prev)
@@ -376,6 +393,9 @@ class main_wnd_UI(QMainWindow) :
         self.v_bar = pg.InfiniteLine(movable=True, angle=90,pen=pg.mkPen(QtGui.QColor(250,250,0,0x60),width=4), label='{value}', 
                         labelOpts={'position': 0.1, 'anchors':[(0.5, 0), (0.5, 1)],'color': 'black', 'fill': "white",'movable': True}) #"border": "grey"
         self.v_bar.sigDragged.connect(self.ser_raw_cursor_sig_dragged)
+        
+        self.v_bar_pro = pg.InfiniteLine(movable=True, angle=90,pen=pg.mkPen(QtGui.QColor(0,250,250,0x60),width=4)) #"border": "grey"
+        self.v_bar_pro.sigDragged.connect(self.ser_trame_cursor_sig_dragged)
 
         
         # config plot profile spectral
@@ -482,10 +502,9 @@ class main_wnd_UI(QMainWindow) :
         except:
             self.ui.tab_main.setCurrentIndex(0)
             self.ui.panelWidget.setCurrentIndex(0)
-        self.ui.view_dir_lbl.setText(self.working_dir) 
+        #self.ui.view_dir_lbl.setText(self.working_dir) 
         self.ui.view_dir2_lbl.setText(self.working_dir)
-        self.ui.select_dir_lbl.setText(self.working_dir)
-            
+        self.ui.select_dir_lbl.setText(self.working_dir) 
         
         # force antialiasing option de pyqtgraph
         pg.setConfigOptions(antialias=True)
@@ -494,6 +513,7 @@ class main_wnd_UI(QMainWindow) :
     def show(self) :
         self.ui.show()
         self.ui.dock_console.show()
+        self.on_tab_changed(self.current_tab)
        
     
     def closeEvent (self,event):
@@ -534,6 +554,21 @@ class main_wnd_UI(QMainWindow) :
             msg.setText("Redémarrer l'application pour changer la langue")
             msg.setWindowTitle("Message")
             msg.exec()
+            
+    def on_tab_changed(self, index) :
+        self.current_tab = index
+
+        # tab viewer
+        if index == 0 or index ==1 :
+            # si deja images alors ne pas relire le repertoire
+            if self.working_dir !='' and self.ui.img_list_view.count() == 0:
+                self.ui.select_list_files.clear()
+                self.ui.select_files_sel_list.clear()
+                self.iqm_list=[]
+                self.selected_files=[]
+                self.select_read()
+                self.view_radio_clicked()
+
 
     def read_ini(self) :
         # recuperation des parametres de configuration memorisé au dernier traitement
@@ -594,99 +629,152 @@ class main_wnd_UI(QMainWindow) :
             pass
     
     
+    def on_mouse_move (self, pos) :
+        
+        app_tab= self.ui.tab_main.tabText(self.ui.tab_main.currentIndex())
+        #print(app_tab)
+
+        if app_tab=='Stack' :
+            if self.ui.stack_image_view.imageItem.sceneBoundingRect().contains(pos) :
+                mouse_point= self.ui.stack_image_view.view.mapSceneToView(pos)
+                x,y =int(mouse_point.x()), int(mouse_point.y())
+                
+                if 0 <= x < self.ui.stack_image_view.image.shape[0] and 0<= y < self.ui.stack_image_view.image.shape[1] :
+                    # pour affichage premiere ligne n'est pas 0 mais 1
+                    msg="x : "+str(x+1)+' , y : '+str(y+1)
+                    #print(msg)
+                    pix_value = self.ui.stack_image_view.image[x,y]
+                    msg=msg+' , I : '+str(int(pix_value))
+                    #print(pix_value)
+                    self.ui.statusbar.showMessage(msg)
+                else:
+                    #print ("mouse out of bounds")
+                    self.ui.statusbar.clearMessage() 
+        if app_tab=='Mosa' :
+            if self.ui.mosa_image_view.imageItem.sceneBoundingRect().contains(pos) :
+                mouse_point= self.ui.mosa_image_view.view.mapSceneToView(pos)
+                x,y =int(mouse_point.x()), int(mouse_point.y())
+                
+                if 0 <= x < self.ui.mosa_image_view.image.shape[0] and 0<= y < self.ui.mosa_image_view.image.shape[1] :
+                    # pour affichage premiere ligne n'est pas 0 mais 1
+                    msg="x : "+str(x+1)+' , y : '+str(y+1)
+                    #print(msg)
+                    pix_value = self.ui.mosa_image_view.image[x,y]
+                    try :
+                        if len(pix_value) != 1:
+                            msg=msg+' , R : '+str(int(pix_value[0]))+ ' , G : '+str(int(pix_value[1]))+' , B : '+str(int(pix_value[2]))
+                    except :
+                        msg=msg+' , I : '+str(int(pix_value))
+                    self.ui.statusbar.showMessage(msg)
+                else:
+                    #print ("mouse out of bounds")
+                    self.ui.statusbar.clearMessage()     
+                    
+        if app_tab=="Animation" : 
+            if self.ui.anim_image_view.imageItem.sceneBoundingRect().contains(pos) :
+                mouse_point= self.ui.anim_image_view.view.mapSceneToView(pos)
+                x,y =int(mouse_point.x()), int(mouse_point.y())
+                msg='X : '+str(x)+' ; Y : '+str(y)
+                self.ui.statusbar.showMessage(msg)
+                
+        if app_tab=='SER' :
+            if self.ui.ser_view.imageItem.sceneBoundingRect().contains(pos) :
+                mouse_point= self.ui.ser_view.view.mapSceneToView(pos)
+                x,y =int(mouse_point.x()), int(mouse_point.y())
+                if 0 <= x < self.ui.ser_view.image.shape[1] and 0<= y < self.ui.ser_view.image.shape[2] :
+                    #numero de trame
+                    trame= self.ui.ser_view.currentIndex
+                    msg="x : "+str(x+1)+' , y : '+str(y+1)
+                    pix_value = self.ui.ser_view.image[trame][x,y]
+                    msg=msg+' , I : '+str(int(pix_value))
+                    self.ui.statusbar.showMessage(msg)
+                else:
+                    self.ui.statusbar.clearMessage()     
+
+                
+        if app_tab=='Traitements' or app_tab=="Processings":
+            if self.ui.proc_view.imageItem.sceneBoundingRect().contains(pos) :
+                mouse_point= self.ui.proc_view.view.mapSceneToView(pos)
+                x,y =int(mouse_point.x()), int(mouse_point.y())
+                
+                if 0 <= x < self.ui.proc_view.image.shape[0] and 0<= y < self.ui.proc_view.image.shape[1] :
+                    # pour affichage premiere ligne n'est pas 0 mais 1
+                    msg="x : "+str(x+1)+' , y : '+str(y+1)
+                    #print(msg)
+                    pix_value = self.ui.proc_view.image[x,y]
+                    try :
+                        if len(pix_value) != 1:
+                            msg=msg+' , R : '+str(int(pix_value[0]))+ ' , G : '+str(int(pix_value[1]))+' , B : '+str(int(pix_value[2]))
+                    except :
+                        msg=msg+' , I : '+str(int(pix_value))
+                    self.ui.statusbar.showMessage(msg)
+                else:
+                    #print ("mouse out of bounds")
+                    self.ui.statusbar.clearMessage()  
+        if app_tab=='Magnet' :
+            if self.ui.mag_img_view.imageItem.sceneBoundingRect().contains(pos) :
+                mouse_point= self.ui.proc_view.view.mapSceneToView(pos)
+                x,y =int(mouse_point.x()), int(mouse_point.y())
+                
+                if 0 <= x < self.ui.mag_img_view.image.shape[0] and 0<= y < self.ui.mag_img_view.image.shape[1] :
+                    # pour affichage premiere ligne n'est pas 0 mais 1
+                    msg="x : "+str(x+1)+' , y : '+str(y+1)
+                    #print(msg)
+                    pix_value = self.ui.mag_img_view.image[x,y]
+                    try :
+                        if len(pix_value) != 1:
+                            msg=msg+' , R : '+str(int(pix_value[0]))+ ' , G : '+str(int(pix_value[1]))+' , B : '+str(int(pix_value[2]))
+                    except :
+                        msg=msg+' , I : '+str(int(pix_value))
+                    self.ui.statusbar.showMessage(msg)
+                else:
+                    #print ("mouse out of bounds")
+                    self.ui.statusbar.clearMessage()  
+                
+    def on_mouse_click (self, ev) :
+        app_tab= self.ui.tab_main.tabText(self.ui.tab_main.currentIndex())
+        #print(app_tab)
+
+        if app_tab=='SER' :
+            pos=ev.pos()
+            try :
+                if self.mypoint.scene() is  self.ui.ser_raw_view.getView().scene() :
+                    self.ui.ser_raw_view.view.removeItem(self.mypoint)
+            except :
+                pass
+            if self.ui.ser_view.imageItem.sceneBoundingRect().contains(pos) :
+                
+                mouse_point= self.ui.ser_view.view.mapSceneToView(pos)
+                x,y =int(mouse_point.x()), int(mouse_point.y())
+                msg='X : '+str(x)+' ; Y : '+str(y)
+                self.ui.statusbar.showMessage(msg)
+                self.ui.ser_posx_lbl.setText(str(x))
+                if self.flag_raw :
+                    # point rouge
+                    self.mypoint=QGraphicsEllipseItem(0,0,6,6)
+                    self.mypoint.setPen(pg.mkPen(color=(250, 120, 0), width=12))
+                    self.mypoint.setPos(self.ui.ser_view.currentIndex-3, x-3)
+                    self.ui.ser_raw_view.view.addItem(self.mypoint)  
+                
+                self.v_bar_pro.setPos(x)
+            else:
+                #print ("mouse out of bounds")
+                self.ui.statusbar.clearMessage() 
+    
     #--------------------------------------------------------------------------
     # tab viewer
-    #--------------------------------------------------------------------------    
+    #--------------------------------------------------------------------------   
+    
     def view_dir_open_clicked (self) :
         select_dir_name = str(QFileDialog.getExistingDirectory(self, self.tr("Sélection répertoire"), self.working_dir))
         if select_dir_name : #si ne retourne pas une chaine vide
             self.working_dir=select_dir_name
             self.ui.view_dir2_lbl.setText(self.working_dir)
-            self.ui.view_dir_lbl.setText(self.working_dir)
+            #self.ui.view_dir_lbl.setText(self.working_dir)
             self.ui.select_dir_lbl.setText(self.working_dir)
             self.select_read()
             self.view_radio_clicked()
 
-                                        
-    def view_open_clicked (self):
-        # choix de ne traiter que les images png noir et blanc
-        
-        self.file_list=[]
-        self.ui.stack_image_view.clear()
-        # mode dialog instancié pour récupérer le repertoire meme si pas de fichier selectionner
-        #self.file_list = QFileDialog.getOpenFileNames(self,self.tr( "Selectionner Images"), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers disk fits (*.fits);;Fichiers clahe png (*_clahe.png)"), self.pattern)
-        
-        dialog = QFileDialog()
-        dialog.setFileMode(QFileDialog.ExistingFiles)  # Peut aussi être ExistingFile ou AnyFile selon le cas
-        dialog.setDirectory(self.working_dir)
-        dialog.setNameFilters([ "Fichiers png (*.png)",
-            "Fichiers protus (*_protu*.png)",
-            "Fichiers clahe (*_clahe.png)",
-            "Fichiers free (*_free.png)",
-            "Fichiers raw (*_raw.png)",
-            "Fichiers _recon fits (*_recon*.fits)",
-            "Fichiers _free fits (*_free.fits)",
-            "Fichiers fits (*.fits)",
-            "Fichiers ser (*.ser)",
-            "Fichiers tiff (*.tiff)"
-            ])
-        dialog.selectNameFilter("Fichiers png (*.png)")  # Filtre par défaut
-        #dialog.setOption(QFileDialog.DontUseNativeDialog)  # Pour garantir l'accès à directory() sur toutes plateformes
-
-        if dialog.exec():
-            self.file_list = dialog.selectedFiles()
-            last_dir= self.get_dirpath(self.file_list[0])
-        else:
-            last_dir = dialog.directory().absolutePath()
-
-        self.working_dir= last_dir
-        self.ui.view_dir_lbl.setText(last_dir)
-        self.ui.view_dir2_lbl.setText(self.working_dir)
-        
-        if self.file_list  != '':
-            #self.file_list=self.file_list[0]
-            
-            self.ui.view_dir_lbl.setText(self.working_dir)           
-            self.view_display_img(self.file_list)
-            self.ui.img_list_view.itemDoubleClicked.connect(self.view_img_click)
-        else :
-            print(self.tr("Pas de fichiers"))
-    
-    def view_add_open_clicked (self):
-        # mode dialog instancié pour récupérer le repertoire meme si pas de fichier selectionner
-        add_file_list=[]
-        dialog = QFileDialog()
-        dialog.setFileMode(QFileDialog.ExistingFiles)  # Peut aussi être ExistingFile ou AnyFile selon le cas
-        dialog.setDirectory(self.working_dir)
-        dialog.setNameFilters([ "Fichiers png (*.png)",
-            "Fichiers protus (*_protu*.png)",
-            "Fichiers clahe (*_clahe.png)",
-            "Fichiers raw (*_raw.png)",
-            "Fichiers _recon (*_recon*.fits)",
-            "Fichiers fits (*.fits)",
-            "Fichiers tiff (*.tiff)"
-            ])
-        dialog.selectNameFilter("Fichiers png (*.png)")  # Filtre par défaut
-        #dialog.setOption(QFileDialog.DontUseNativeDialog)  # Pour garantir l'accès à directory() sur toutes plateformes
-
-        if dialog.exec():
-            add_file_list = dialog.selectedFiles()
-            last_dir= self.get_dirpath(add_file_list[0])
-        else:
-            last_dir = dialog.directory().absolutePath()
-
-        self.working_dir= last_dir
-        self.ui.view_dir_lbl.setText(last_dir)
-        
-        self.file_list = self.file_list+add_file_list
-        
-        if self.file_list  != '':
-            #self.file_list=self.file_list[0]
-            
-            self.ui.view_dir_lbl.setText(self.working_dir)           
-            self.view_display_img(self.file_list)
-            self.ui.img_list_view.itemClicked.connect(self.view_img_click)
-    
     
     def view_display_img (self, file_list) :
         self.ui.img_list_view.clear()
@@ -753,8 +841,10 @@ class main_wnd_UI(QMainWindow) :
         self.myimg_solo = img_wnd(self.working_dir)
     
     def view_img_click (self,item) :
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        
         index= self.ui.img_list_view.row(item)
-        self.file_view= self.file_list[index]
+        self.file_view= self.file_list_view[index]
         ext = self.get_extension(self.file_view)
         
         if ext=='png' or ext=='tiff' :
@@ -807,22 +897,24 @@ class main_wnd_UI(QMainWindow) :
         self.myimg_solo.ui.inti_view.setImage(img_proc, autoRange=False)
         if ext == "ser" :
             self.myimg_solo.ui.inti_view.setCurrentIndex(Frame_start)
-        self.myimg_solo.set_title(self.short_name(self.file_list[index]))
+        self.myimg_solo.set_title(self.short_name(self.file_list_view[index]))
         self.myimg_solo.on_ferme.connect(self.view_open_in_tab)
         self.myimg_solo.ui.raise_()
-        self.myimg_solo.ui.activateWindow()       
+        self.myimg_solo.ui.activateWindow()      
+        
+        QApplication.restoreOverrideCursor()
 
     def view_filtre_clicked (self, pattern) :
         QApplication.setOverrideCursor(Qt.WaitCursor)
         crit_list=[]
-        self.ui.view_dir_lbl.setText(self.working_dir)   
+        #self.ui.view_dir_lbl.setText(self.working_dir)   
         filtre={"clahe":"*_clahe","protus":"*_protus*","cont":"*_cont","doppler":"*_doppler*","color":"*_color*","free":"*_free","raw":"*_raw","tous":"*","disk":'*_disk'}
         ext = self.view_get_radio()
         critere= filtre[pattern]+ext
         crit_dir = self.working_dir
         crit_list =  fnmatch.filter(os.listdir(crit_dir), critere)
         self.ui.view_dir2_lbl.setText(crit_dir)
-        self.ui.view_dir_lbl.setText(crit_dir)
+        #self.ui.view_dir_lbl.setText(crit_dir)
         
         if not crit_list :
             if filtre[pattern] == "*_clahe" :
@@ -834,8 +926,8 @@ class main_wnd_UI(QMainWindow) :
                 crit_list =  fnmatch.filter(os.listdir(crit_dir), critere)
                 self.ui.view_dir2_lbl.setText(crit_dir)
         try :
-            self.file_list = [crit_dir+os.sep+x for x in crit_list]
-            self.view_display_img(self.file_list)
+            self.file_list_view = [crit_dir+os.sep+x for x in crit_list]
+            self.view_display_img(self.file_list_view)
             self.ui.img_list_view.itemDoubleClicked.connect(self.view_img_click)
             
         except :
@@ -866,6 +958,8 @@ class main_wnd_UI(QMainWindow) :
         
     
     def view_open_in_tab(self) :
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        
         self.ext_view = self.get_extension(self.file_view)
         if self.ext_view == 'png' or self.ext_view == 'fits' or self.ext_view == 'tiff':
             page = self.ui.tab_main.findChild(QWidget, 'tab_proc')
@@ -882,6 +976,8 @@ class main_wnd_UI(QMainWindow) :
             self.ser_read()
         self.myimg_solo.ui.close()
         
+        QApplication.restoreOverrideCursor()
+        
     
     def view_open_context_menu(self, pos) :
         if self.ui.view_ser_radio.isChecked() :
@@ -894,8 +990,9 @@ class main_wnd_UI(QMainWindow) :
     
             menu = QMenu(self)
             self.selected_filename = item.text()
-            action_ouvrir = menu.addAction("Ouvrir INTI")
-            action_lancer = menu.addAction("Lancer INTI")
+            action_chdir = menu.addAction(self.tr("Changer répertoire INTI"))
+            action_ouvrir = menu.addAction(self.tr("Ouvrir INTI"))
+            action_lancer = menu.addAction(self.tr("Traiter avec INTI"))
     
             action = menu.exec(self.ui.img_list_view.viewport().mapToGlobal(pos))
     
@@ -903,27 +1000,34 @@ class main_wnd_UI(QMainWindow) :
                 self.view_open_inti()
             elif action == action_lancer:
                 self.view_run_inti()
+            elif action == action_chdir :
+                self.view_chdir_inti()
 
+    def view_chdir_inti(self) :
+        inti_exe, _ = QFileDialog.getOpenFileName(self, "Trouver executable inti", "", "inti (inti*.exe)")
+        if inti_exe:
+            self.inti_dir = os.path.dirname(inti_exe)
+            print(self.tr("Répertoire d'inti' :"), self.inti_dir)
             
     def view_open_inti(self) :
         QApplication.setOverrideCursor(Qt.WaitCursor)
         filename=self.selected_filename
         filename=self.working_dir+os.sep+filename
         #print("fichier : "+ filename)
-        # attention test avec inti_qt en dev
-        if not os.path.exists(self.inti_dir+os.sep+'inti_qt.exe'):
+        
+        if not os.path.exists(self.inti_dir+os.sep+'inti.exe'):
             inti_exe, _ = QFileDialog.getOpenFileName(self, "Trouver executable inti", "", "inti (inti*.exe)")
             if inti_exe:
                 self.inti_dir = os.path.dirname(inti_exe)
-                print("Répertoire d'inti' :", self.inti_dir)
+                print(self.tr("Répertoire d'inti' :"), self.inti_dir)
         else :
             try :
                 if 'spyder' in sys.modules :
                     print("lance inti")
                 else :
-                    subprocess.Popen([self.inti_dir+os.sep+'inti_qt.exe', filename])
+                    subprocess.Popen([self.inti_dir+os.sep+'inti.exe', filename])
             except :
-                print(self.tr('ERREUR :  lancement '+ self.inti_dir+os.sep+'inti_qt.exe'))
+                print(self.tr('ERREUR :  lancement '+ self.inti_dir+os.sep+'inti.exe'))
         
         QApplication.restoreOverrideCursor()
         
@@ -932,7 +1036,7 @@ class main_wnd_UI(QMainWindow) :
         filename=self.selected_filename
         filename=self.working_dir+os.sep+filename
         # lance inti et traite
-        if not os.path.exists(self.inti_dir+os.sep+'inti_qt.exe'):
+        if not os.path.exists(self.inti_dir+os.sep+'inti.exe'):
             inti_exe, _ = QFileDialog.getOpenFileName(self, "Trouver executable inti", "", "inti (inti*.exe)")
             if inti_exe:
                 self.inti_dir = os.path.dirname(inti_exe)
@@ -942,9 +1046,9 @@ class main_wnd_UI(QMainWindow) :
                 if 'spyder' in sys.modules :
                     print("lance inti")
                 else :
-                    subprocess.Popen([self.inti_dir+os.sep+'inti_qt.exe', filename, "True"])
+                    subprocess.Popen([self.inti_dir+os.sep+'inti.exe', filename, "True"])
             except :
-                print(self.tr('ERREUR :  lancement '+ self.inti_dir+os.sep+'inti_qt.exe'))
+                print(self.tr('ERREUR :  lancement '+ self.inti_dir+os.sep+'inti.exe'))
         
         QApplication.restoreOverrideCursor()
         
@@ -1395,162 +1499,7 @@ class main_wnd_UI(QMainWindow) :
         rotated_data = np.fliplr(np.rot90(image_data, 3))
         self.ui.stack_image_view.setImage(rotated_data,autoRange=False, autoLevels=True)
     
-    def on_mouse_move (self, pos) :
-        app_tab= self.ui.tab_main.tabText(self.ui.tab_main.currentIndex())
-        #print(app_tab)
-
-        if app_tab=='Stack' :
-            if self.ui.stack_image_view.imageItem.sceneBoundingRect().contains(pos) :
-                mouse_point= self.ui.stack_image_view.view.mapSceneToView(pos)
-                x,y =int(mouse_point.x()), int(mouse_point.y())
-                
-                if 0 <= x < self.ui.stack_image_view.image.shape[0] and 0<= y < self.ui.stack_image_view.image.shape[1] :
-                    # pour affichage premiere ligne n'est pas 0 mais 1
-                    msg="x : "+str(x+1)+' , y : '+str(y+1)
-                    #print(msg)
-                    pix_value = self.ui.stack_image_view.image[x,y]
-                    msg=msg+' , I : '+str(int(pix_value))
-                    #print(pix_value)
-                    self.ui.statusbar.showMessage(msg)
-                else:
-                    #print ("mouse out of bounds")
-                    self.ui.statusbar.clearMessage() 
-        if app_tab=='Mosa' :
-            if self.ui.mosa_image_view.imageItem.sceneBoundingRect().contains(pos) :
-                mouse_point= self.ui.mosa_image_view.view.mapSceneToView(pos)
-                x,y =int(mouse_point.x()), int(mouse_point.y())
-                
-                if 0 <= x < self.ui.mosa_image_view.image.shape[0] and 0<= y < self.ui.mosa_image_view.image.shape[1] :
-                    # pour affichage premiere ligne n'est pas 0 mais 1
-                    msg="x : "+str(x+1)+' , y : '+str(y+1)
-                    #print(msg)
-                    pix_value = self.ui.mosa_image_view.image[x,y]
-                    try :
-                        if len(pix_value) != 1:
-                            msg=msg+' , R : '+str(int(pix_value[0]))+ ' , G : '+str(int(pix_value[1]))+' , B : '+str(int(pix_value[2]))
-                    except :
-                        msg=msg+' , I : '+str(int(pix_value))
-                    self.ui.statusbar.showMessage(msg)
-                else:
-                    #print ("mouse out of bounds")
-                    self.ui.statusbar.clearMessage()     
-                    
-        if app_tab=="Animation" : 
-            if self.ui.anim_image_view.imageItem.sceneBoundingRect().contains(pos) :
-                mouse_point= self.ui.anim_image_view.view.mapSceneToView(pos)
-                x,y =int(mouse_point.x()), int(mouse_point.y())
-                msg='X : '+str(x)+' ; Y : '+str(y)
-                self.ui.statusbar.showMessage(msg)
-                
-        if app_tab=='SER' :
-            if self.ui.ser_view.imageItem.sceneBoundingRect().contains(pos) :
-                mouse_point= self.ui.ser_view.view.mapSceneToView(pos)
-                x,y =int(mouse_point.x()), int(mouse_point.y())
-                if 0 <= x < self.ui.ser_view.image.shape[1] and 0<= y < self.ui.ser_view.image.shape[2] :
-                    #numero de trame
-                    trame= self.ui.ser_view.currentIndex
-                    msg="x : "+str(x+1)+' , y : '+str(y+1)
-                    pix_value = self.ui.ser_view.image[trame][x,y]
-                    msg=msg+' , I : '+str(int(pix_value))
-                    self.ui.statusbar.showMessage(msg)
-                else:
-                    self.ui.statusbar.clearMessage()     
-
-                
-        if app_tab=='Traitements' or app_tab=="Processings":
-            if self.ui.proc_view.imageItem.sceneBoundingRect().contains(pos) :
-                mouse_point= self.ui.proc_view.view.mapSceneToView(pos)
-                x,y =int(mouse_point.x()), int(mouse_point.y())
-                
-                if 0 <= x < self.ui.proc_view.image.shape[0] and 0<= y < self.ui.proc_view.image.shape[1] :
-                    # pour affichage premiere ligne n'est pas 0 mais 1
-                    msg="x : "+str(x+1)+' , y : '+str(y+1)
-                    #print(msg)
-                    pix_value = self.ui.proc_view.image[x,y]
-                    try :
-                        if len(pix_value) != 1:
-                            msg=msg+' , R : '+str(int(pix_value[0]))+ ' , G : '+str(int(pix_value[1]))+' , B : '+str(int(pix_value[2]))
-                    except :
-                        msg=msg+' , I : '+str(int(pix_value))
-                    self.ui.statusbar.showMessage(msg)
-                else:
-                    #print ("mouse out of bounds")
-                    self.ui.statusbar.clearMessage()  
-        if app_tab=='Magnet' :
-            if self.ui.mag_img_view.imageItem.sceneBoundingRect().contains(pos) :
-                mouse_point= self.ui.proc_view.view.mapSceneToView(pos)
-                x,y =int(mouse_point.x()), int(mouse_point.y())
-                
-                if 0 <= x < self.ui.mag_img_view.image.shape[0] and 0<= y < self.ui.mag_img_view.image.shape[1] :
-                    # pour affichage premiere ligne n'est pas 0 mais 1
-                    msg="x : "+str(x+1)+' , y : '+str(y+1)
-                    #print(msg)
-                    pix_value = self.ui.mag_img_view.image[x,y]
-                    try :
-                        if len(pix_value) != 1:
-                            msg=msg+' , R : '+str(int(pix_value[0]))+ ' , G : '+str(int(pix_value[1]))+' , B : '+str(int(pix_value[2]))
-                    except :
-                        msg=msg+' , I : '+str(int(pix_value))
-                    self.ui.statusbar.showMessage(msg)
-                else:
-                    #print ("mouse out of bounds")
-                    self.ui.statusbar.clearMessage()  
-                
-    def on_mouse_click (self, ev) :
-        app_tab= self.ui.tab_main.tabText(self.ui.tab_main.currentIndex())
-        #print(app_tab)
-
-        if app_tab=='SER' :
-            pos=ev.pos()
-            try :
-                if self.mypoint.scene() is  self.ui.ser_raw_view.getView().scene() :
-                    self.ui.ser_raw_view.view.removeItem(self.mypoint)
-            except :
-                pass
-            if self.ui.ser_view.imageItem.sceneBoundingRect().contains(pos) :
-                
-                mouse_point= self.ui.ser_view.view.mapSceneToView(pos)
-                x,y =int(mouse_point.x()), int(mouse_point.y())
-                msg='X : '+str(x)+' ; Y : '+str(y)
-                self.ui.statusbar.showMessage(msg)
-                self.ui.ser_posx_lbl.setText(str(x))
-                if self.flag_raw :
-                    # point rouge
-                    self.mypoint=QGraphicsEllipseItem(0,0,6,6)
-                    self.mypoint.setPen(pg.mkPen(color=(250, 120, 0), width=12))
-                    self.mypoint.setPos(self.ui.ser_view.currentIndex-3, x-3)
-                    self.ui.ser_raw_view.view.addItem(self.mypoint)  
-                
-                # recupere le profil spectral 
-                trame_index=self.ui.ser_view.currentIndex
-                spectre_img=self.ui.ser_view.image
-                my_trame = spectre_img[trame_index]
-                ih = spectre_img[trame_index].shape[1]
-                lamb=np.arange (0,ih)
-                profil=my_trame[x:x+1,:][0]
-                self.ser_posx = x
-                
-                # affiche profile
-                self.ui.spectre_view.clear()
-                self.ui.spectre_view.setBackground('w')
-                pen=pg.mkPen(color='blue',width=1.5)
-                profile_name= 'Trame '+ str(trame_index)
-                self.myplot = self.ui.spectre_view.plot(lamb, profil, pen=pen, name=profile_name, maxTickLength=-100)
-                
-                # affiche ligne verticale sur le fichier ser
-                #x1, y1, x2, y2
-                try :
-                    if self.myline.scene() is  self.ui.ser_view.getView().scene() :
-                        self.ui.ser_view.view.removeItem(self.myline)  
-                except :
-                    pass
-                self.myline=QGraphicsLineItem(x,0,x,ih)
-                self.myline.setPen(pg.mkPen(color=(0, 150, 0), width=2))
-                self.ui.ser_view.view.addItem(self.myline)  
-                
-            else:
-                #print ("mouse out of bounds")
-                self.ui.statusbar.clearMessage() 
+    
                 
     def sharpenImage(self,image, level):
         """
@@ -1680,9 +1629,10 @@ class main_wnd_UI(QMainWindow) :
         if select_dir_name : #si ne retourne pas une chaine vide
             self.working_dir=select_dir_name
             self.ui.select_dir_lbl.setText(self.working_dir)
-            self.ui.view_dir_lbl.setText(self.working_dir)
+            #self.ui.view_dir_lbl.setText(self.working_dir)
             self.ui.view_dir2_lbl.setText(self.working_dir)
-            self.select_read()
+            self.select_read() 
+            self.ui.img_list_view.clear()
     
     def select_read (self):
         
@@ -1726,9 +1676,6 @@ class main_wnd_UI(QMainWindow) :
         self.ui.select_image_view.view.setXLink(self.ui.select_image_view_ref.view)
         self.ui.select_image_view.view.setYLink(self.ui.select_image_view_ref.view)
         
-        # se place en viewall
-        self.ui.select_image_view_ref.autoRange()
-        self.ui.select_image_view.view.autoRange()
         
         # calcul list des iqm
         for f in self.select_files :
@@ -1737,7 +1684,10 @@ class main_wnd_UI(QMainWindow) :
         
         self.ui.select_filesel_lbl.setText(self.select_files[1]+' '+self.iqm_list[1][0])
         self.ui.select_file_lbl.setText(self.select_files[0]+' '+self.iqm_list[0][0])
-       
+        
+        # se place en viewall mais il faut attendre que l'image se charge dans cycle Qt
+        QTimer.singleShot(10, lambda: self.ui.select_image_view_ref.getView().autoRange())
+
             
     def display_select_image_png(self, file_sh_name, viewport) :
         file_name=self.working_dir+os.sep+file_sh_name
@@ -1914,12 +1864,12 @@ class main_wnd_UI(QMainWindow) :
         file_list = QFileDialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.mosa_dir, self.tr("Fichiers png (*.png);;Fichiers disk.png (*_disk.png);;Fichiers protus.png (*_protus.png);;Fichiers clahe.png (*_clahe.png);;Fichiers recon fits (*_recon.fits);;Fichiers fits (*.fits);;Tous les fichiers (*)"), self.pattern)
         self.pattern =file_list[1]
         if file_list[0] != [] :
-            self.file_list=file_list[0]
-            self.working_dir= self.get_dirpath(self.file_list[0])
+            self.file_list_mosa=file_list[0]
+            self.working_dir= self.get_dirpath(self.file_list_mosa[0])
             self.ui.mosa_dir_lbl.setText(self.working_dir)
-            self.load_mosa_imagettes (self.file_list, "tab_mosa")
+            self.load_mosa_imagettes (self.file_list_mosa, "tab_mosa")
             file_names=[]
-            for f in self.file_list :
+            for f in self.file_list_mosa :
                 file_names.append (self.short_name(f))
             self.ui.mosa_image_view.ui.histogram.hide()
     
@@ -1970,13 +1920,13 @@ class main_wnd_UI(QMainWindow) :
     
     def mosa_img_list_view_sel_changed (self) :
         index=self.ui.mosa_img_list_view.currentRow()
-        #print(self.short_name(self.file_list[index]))
+        #print(self.short_name(self.file_list_mosa[index]))
         if index !=-1 :
-            ext = self.get_extension (self.file_list[index])
+            ext = self.get_extension (self.file_list_mosa[index])
             if ext == 'fits' :
-                self.display_mosa_image_fits (self.file_list[index])
+                self.display_mosa_image_fits (self.file_list_mosa[index])
             if ext == 'png' or ext=='jpg' :
-                self.display_mosa_image_png (self.file_list[index])
+                self.display_mosa_image_png (self.file_list_mosa[index])
             self.ui.mosa_image_view.ui.histogram.show()
     
     def display_mosa_image_png(self, file_name) :
@@ -1992,12 +1942,12 @@ class main_wnd_UI(QMainWindow) :
         self.ui.mosa_image_view.setImage(rotated_data,autoRange=False, autoLevels=True)
         
     def run_mosa_clicked (self):
-        ext = self.get_extension (self.file_list[0])
-        myimg, iw, ih, centerX, centerY, solarR, x1, x2, y1, y2, flag_error= mo.prepare_files(self.working_dir, self.file_list)
+        ext = self.get_extension (self.file_list_mosa[0])
+        myimg, iw, ih, centerX, centerY, solarR, x1, x2, y1, y2, flag_error= mo.prepare_files(self.working_dir, self.file_list_mosa)
         if flag_error == True :
             print(self.tr("Erreur lecture géométrie"))
         else :
-            mosa_im, nbplan, nom_base = mo.create_mosa(self.working_dir, self.file_list, ext, myimg, iw, ih, centerX, centerY, solarR, x1, x2, y1, y2)
+            mosa_im, nbplan, nom_base = mo.create_mosa(self.working_dir, self.file_list_mosa, ext, myimg, iw, ih, centerX, centerY, solarR, x1, x2, y1, y2)
             mosa_im=np.array(mosa_im, dtype='uint16')
             rotated_data = np.fliplr(np.rot90(mosa_im, 3))
             self.ui.mosa_image_view.setImage(rotated_data,autoRange=False, autoLevels=True)
@@ -2038,11 +1988,11 @@ class main_wnd_UI(QMainWindow) :
         self.pattern = file_list[1]
         if len(file_list[0]) != 0 :
             self.ui.anim_list.clear()
-            self.file_list=file_list[0]
-            self.working_dir= self.get_dirpath(self.file_list[0])
+            self.file_list_anim=file_list[0]
+            self.working_dir= self.get_dirpath(self.file_list_anim[0])
             self.ui.anim_dir_lbl.setText(self.working_dir)
             self.file_names=[]
-            for f in self.file_list :
+            for f in self.file_list_anim :
                 self.file_names.append (self.short_name(f))
             self.ui.anim_list.addItems (self.file_names)
             self.ui.anim_image_view.ui.histogram.hide()
@@ -2055,7 +2005,7 @@ class main_wnd_UI(QMainWindow) :
         file_add_list=[]
         file_add_list = QFileDialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus (*_protus.png);;Fichiers clahe (*_clahe.png);;Fichiers free (*_free.png);;Tous les fichiers (*)"), self.pattern)
         file_add_list=file_add_list[0]
-        self.file_list.extend (file_add_list)
+        self.file_list_anim.extend (file_add_list)
         file_add_names=[]
         for f in file_add_list :
             file_add_names.append (self.short_name(f))
@@ -2064,7 +2014,7 @@ class main_wnd_UI(QMainWindow) :
 
 
     def anim_open_sel_list (self):
-        self.file_list=[]
+        self.file_list_anim=[]
         file_name, _ = QFileDialog.getOpenFileName(self, self.tr("Ouvrir une liste de fichier"), self.working_dir, self.tr("Fichiers liste (t*_sel.txt)"))   
         # get directory out of file_name
         self.working_dir, _= os.path.split(file_name)
@@ -2075,10 +2025,10 @@ class main_wnd_UI(QMainWindow) :
                 n=[self.working_dir+os.sep+a.split("\n")[0] for a in read_lines]
                 #print(n)
                 if read_lines :
-                    self.file_list=n
+                    self.file_list_anim=n
                     
                     file_names=[]
-                    for f in self.file_list :
+                    for f in self.file_list_anim :
                         file_names.append (self.short_name(f))
                     self.ui.anim_list.addItems (file_names)                
                     self.ui.anim_list.setCurrentRow(0)
@@ -2096,43 +2046,44 @@ class main_wnd_UI(QMainWindow) :
     def anim_list_sel_changed (self) :
         index=self.ui.anim_list.currentRow()
         self.current_index=index
-        #print(self.short_name(self.file_list[index]))
-        self.ui.anim_file_name_lbl.setText(self.short_name(self.file_list[index]))
+        #print(self.short_name(self.file_list_anim[index]))
+        self.ui.anim_file_name_lbl.setText(self.short_name(self.file_list_anim[index]))
         self.ui.anim_stacked_widget.setCurrentIndex(0)
         if index !=-1 :
-            self.display_anim_image_png (self.file_list[index])
+            self.display_anim_image_png (self.file_list_anim[index])
             
     def anim_next_clicked(self):
          index=self.current_index+1 
-         if index < len(self.file_list) :
+         if index < len(self.file_list_anim) :
              self.ui.anim_list.item(index).setSelected(True)
-             self.display_anim_image_png(self.file_list[index])
+             self.display_anim_image_png(self.file_list_anim[index])
              self.current_index=index
-             self.ui.anim_file_name_lbl.setText(self.short_name(self.file_list[index]))
+             self.ui.anim_file_name_lbl.setText(self.short_name(self.file_list_anim[index]))
              
              
     def anim_prev_clicked(self):
          index=self.current_index-1 
          if index >=0 :
              self.ui.anim_list.item(index).setSelected(True)
-             self.display_anim_image_png(self.file_list[index])
+             self.display_anim_image_png(self.file_list_anim[index])
              self.current_index=index
-             self.ui.anim_file_name_lbl.setText(self.short_name(self.file_list[index]))       
+             self.ui.anim_file_name_lbl.setText(self.short_name(self.file_list_anim[index]))       
              
     def anim_remove_clicked(self):
          #index=self.ui.anim_list.currentRow()
          index=self.current_index
          self.ui.anim_list.item(index).setSelected(True)
          self.ui.anim_list.takeItem(index)
-         del self.file_list[index]
+         del self.file_list_anim[index]
+         del self.file_names[index]
          self.ui.anim_image_view.clear()
          #
          new_index=index
-         if new_index>len(self.file_list)-1 :
-             new_index=len(self.file_list)-1
+         if new_index>len(self.file_list_anim)-1 :
+             new_index=len(self.file_list_anim)-1
          self.ui.anim_list.item(new_index).setSelected(True)
          self.current_index=new_index
-         self.ui.anim_file_name_lbl.setText(self.short_name(self.file_list[new_index]))       
+         self.ui.anim_file_name_lbl.setText(self.short_name(self.file_list_anim[new_index]))       
 
 
 
@@ -2141,7 +2092,7 @@ class main_wnd_UI(QMainWindow) :
         flip_img= cv2.flip(img,1)
         self.ui.anim_image_view.setImage(flip_img)
         rot_data = np.fliplr(np.rot90(flip_img, 3))
-        cv2.imwrite(self.file_list[self.current_index], rot_data)
+        cv2.imwrite(self.file_list_anim[self.current_index], rot_data)
         #print(self.select_files[self.current_index]+' saved')
         
     def anim_flip_dg (self) :
@@ -2149,7 +2100,7 @@ class main_wnd_UI(QMainWindow) :
         flip_img= cv2.flip(img,0)
         self.ui.anim_image_view.setImage(flip_img)
         rot_data = np.fliplr(np.rot90(flip_img, 3))
-        cv2.imwrite(self.file_list[self.current_index], rot_data)
+        cv2.imwrite(self.file_list_anim[self.current_index], rot_data)
         #print(self.select_files[self.current_index]+' saved')
         
     def anim_roi(self) :
@@ -2174,9 +2125,9 @@ class main_wnd_UI(QMainWindow) :
             self.crop_file_list=[]
             self.crop_file_names=[]
             self.file_list_bak=[]
-            self.file_list_bak=self.file_list
+            self.file_list_bak=self.file_list_anim
             self.file_names_bak=self.file_names
-            for f in self.file_list :
+            for f in self.file_list_anim :
                 #myimg= cv2.imread(f,cv2.IMREAD_UNCHANGED)
                 myimg=Image.open(f)
                 myimg=np.asarray(myimg)
@@ -2189,20 +2140,20 @@ class main_wnd_UI(QMainWindow) :
             #
             self.ui.anim_list.clear()
             self.ui.anim_list.addItems (self.crop_file_names)
-            self.file_list=self.crop_file_list
+            self.file_list_anim=self.crop_file_list
             self.ui.anim_list.setCurrentRow(0)
             self.anim_roi()
             self.ui.anim_image_view.autoRange()
         else :
             # pas de ROI on prend les images en entier
-            self.file_list_bak=self.file_list
+            self.file_list_bak=self.file_list_anim
             self.file_names_bak=self.file_names
         
         # met a jour les infos pour l'animation
         self.anim_time_sample_validate()
     
     def anim_reset(self) :
-        self.file_list=self.file_list_bak
+        self.file_list_anim=self.file_list_bak
         self.ui.anim_list.clear()
         self.ui.anim_stacked_widget.setCurrentIndex(0)
         self.ui.anim_list.addItems(self.file_names_bak)
@@ -2211,13 +2162,13 @@ class main_wnd_UI(QMainWindow) :
         
     def anim_time_sample_validate(self) :
         self.ui.anim_stacked_widget.setCurrentIndex(0)
-        img= cv2.imread(self.file_list[0],cv2.IMREAD_UNCHANGED)
+        img= cv2.imread(self.file_list_anim[0],cv2.IMREAD_UNCHANGED)
         h=img.shape[0]
         w=img.shape[1]
         self.ui.anim_ih_lbl.setText(str(h))
         self.ui.anim_iw_lbl.setText(str(w))
         self.flag_nologtxt=False
-        nb_img_acquise = len(self.file_list)
+        nb_img_acquise = len(self.file_list_anim)
         self.ui.anim_nb_acquise_lbl.setText(str(nb_img_acquise))
         if self.ui.anim_nb_total_text.text().isnumeric() :
             nb_trame_totale=int(self.ui.anim_nb_total_text.text())
@@ -2231,6 +2182,8 @@ class main_wnd_UI(QMainWindow) :
             # si fichier clahe alors on remonte repertoire d'un cran
             if self.file_list_bak[0].find("_clahe.") != -1 :
                 log_dir = os.path.dirname(self.working_dir)
+            else :
+                log_dir = self.working_dir
             try :                    
                 files_log = [os.path.basename(get_baseline(os.path.splitext(x)[0])+"_log.txt") for x in self.file_list_bak]
                 #jd,_=[get_time_from_log(log_dir+os.sep+x) for x in files_log]
@@ -2242,8 +2195,8 @@ class main_wnd_UI(QMainWindow) :
                     raise Exception
                 # on recre une sequence de t et de nom de fichier ordonnné
                 new_t=[jd[x] for x in time_seq]
-                self.file_list=[self.file_list[j] for j in time_seq]
-                #print(t, time_seq, new_t, self.file_list)
+                self.file_list_anim=[self.file_list_anim[j] for j in time_seq]
+                #print(t, time_seq, new_t, self.file_list_anim)
                 self.d_sec=[x-new_t[0] for x in new_t]
                 #print(self.d_sec)
                 #s_d_sec=[str(d) for d in d_sec]
@@ -2303,7 +2256,7 @@ class main_wnd_UI(QMainWindow) :
         self.anim_time_sample_validate()
         if self.flag_stop == False : 
             nb_trame_totale=int(self.ui.anim_nb_total_text.text())
-            nb_img_acquise = len(self.file_list)
+            nb_img_acquise = len(self.file_list_anim)
             try :
                 reduction= float(self.ui.anim_reduc_text.text())
             except :
@@ -2316,15 +2269,15 @@ class main_wnd_UI(QMainWindow) :
             # echt est l'echantillonage temporel
             # d_sec est la liste des valeurs de temps des images acquises
             # si pas de datation avec _lot.txt on fixe intervalle fixe de 10
-            img=Image.open(self.file_list[0])
+            img=Image.open(self.file_list_anim[0])
             im1=np.array(img)
             #print(im1.shape)
-            print(str(len(self.file_list))+ self.tr(' fichiers'))
+            print(str(len(self.file_list_anim))+ self.tr(' fichiers'))
             h,w=im1.shape
-            vol_im=np.zeros((len(self.file_list),h,w)) # volume des images acquises
+            vol_im=np.zeros((len(self.file_list_anim),h,w)) # volume des images acquises
             vol_med=[]
-            for k in range(0,len(self.file_list)):
-                fname=self.file_list[k]
+            for k in range(0,len(self.file_list_anim)):
+                fname=self.file_list_anim[k]
                 #img=cv2.imread(fname,cv2.IMREAD_UNCHANGED)
                 img=Image.open(fname)
                 im=np.array(img)
@@ -2334,7 +2287,7 @@ class main_wnd_UI(QMainWindow) :
             
             step=self.echt
             print("Datations : ",self.d_sec)
-            #end_t= round(self.d_sec[len(self.file_list)-1]/step)*step
+            #end_t= round(self.d_sec[len(self.file_list_anim)-1]/step)*step
             end_t=self.duration
             xi=np.arange(0,end_t,step)
             #print (len(xi), xi)
@@ -2633,7 +2586,7 @@ class main_wnd_UI(QMainWindow) :
             if flag_ok : 
                 
                 img_mag, img_mag0, img_cont, polb1, polb2, polr1, polr2, hdr= magnet.magnetogramme (self.working_dir+os.sep,self.racine_droite, self.racine_gauche, nb_filtre_droite_b,nb_filtre_gauche_b)
-                
+                                    
                 rotated_data = np.fliplr(np.rot90(img_mag0, 3))
                 self.ui.mag_img_view.setImage(rotated_data,autoRange=False, autoLevels=True)
                 
@@ -2645,6 +2598,12 @@ class main_wnd_UI(QMainWindow) :
                 img_fits=[]
                 img_fits = [img_mag,img_cont, polb1,polb2, polr1, polr2]
                 img_png= [img_mag+32767, img_cont]
+                
+                
+                if self.ui.mag_corrige_chk.isChecked() :
+                    im= np.copy(img_png[0])
+                    img_png[0]=self.mag_corrige_bandes(im)
+                    
                 f_fits.append(self.working_dir+os.sep+ "mag_s.fits")
                 f_png.append(self.working_dir+os.sep+ "mag_s.png")
                 f_fits.append(self.working_dir+os.sep+ "mag_cont.fits")
@@ -2664,6 +2623,16 @@ class main_wnd_UI(QMainWindow) :
                     self.file_results.append(f_png[i])
                 self.ui.mag_results_list.setCurrentRow(0)
                 
+    
+    def mag_corrige_bandes (self, img) : 
+        seuil,mask = pic_histo(img)
+        img=np.rot90(img,1)
+        belle_image, chull, neg_chull, BelleImage = helium_flat(img, seuil, mask)
+        belle_image=np.rot90(belle_image,3)
+                
+        return belle_image
+    
+    
     def mag_results_list_sel_changed (self) :
         index = self.ui.mag_results_list.currentRow()
         if index !=-1 :
@@ -2733,8 +2702,11 @@ class main_wnd_UI(QMainWindow) :
                 FrameIndex=FrameIndex+1
             
             self.ui.ser_view.setImage(ser_volume)
+            mid_pos= self.ui.ser_view.image.shape[1]//2
             self.ui.ser_trame_start_text.setText(str(1))
             self.ui.ser_trame_end_text.setText(str(self.FrameCount))
+            self.ui.ser_view.view.addItem(self.v_bar_pro)
+            self.v_bar_pro.setPos(mid_pos) # position curseur vertical
             
             
             # Cherche fichier sunscan raw (attention appli mobile sunscan ne donne pas une image raw de la bonne dimension)
@@ -2769,6 +2741,27 @@ class main_wnd_UI(QMainWindow) :
         
         QApplication.restoreOverrideCursor()
         
+    def ser_saveas (self) :
+
+        pos=self.file_ser.rfind('.')
+        nom_suggere =self.working_dir+os.sep+self.file_ser[:pos]
+        
+        file_name,_=QFileDialog.getSaveFileName(self, self.tr("Sauver Trame png"), nom_suggere, self.tr("Fichiers png (*.png);;Tous les fichiers (*)"))
+        
+        if file_name :
+            index = self.ui.ser_view.currentIndex
+            myimage=self.ui.ser_view.image[index]
+            
+            myimage=np.flipud(np.rot90(myimage))
+
+            # ajustment des seuils
+            levels = self.ui.ser_view.getLevels()
+            sbas,shaut = levels
+            if shaut != sbas :
+                myimage = np.clip((myimage-sbas)/(shaut-sbas)*65535,0,65535).astype(np.uint16)
+            
+            cv2.imwrite(file_name, myimage)
+        
     def ser_trim_save (self) :
         if self.ui.ser_trame_start_text.text().isnumeric() :
             trame_deb= int(self.ui.ser_trame_start_text.text())
@@ -2802,16 +2795,14 @@ class main_wnd_UI(QMainWindow) :
         
     
     def ser_frame_changed (self) :
-        try :
-            if self.myline.scene() is  self.ui.ser_view.getView().scene() :
-                self.ui.ser_view.view.removeItem(self.myline)  
-        except :
-            pass
-        #print(self.ui.ser_view.currentIndex)
+
         self.ui.ser_frame_nb_lbl.setText(str(self.ui.ser_view.currentIndex))
+        
         if self.flag_raw :
             self.ui.ser_raw_view.view.addItem(self.v_bar)
-            self.v_bar.setPos(int(self.ui.ser_view.currentIndex)) # position par defaut curseur vertical à 10 valeurs de lambda
+            self.v_bar.setPos(int(self.ui.ser_view.currentIndex)) # position curseur vertical
+            
+        self.ser_view_profil(int(self.v_bar_pro.value()))
     
     def ser_goto_frame (self) :
         goto_frame=int(self.ui.ser_goto_frame_text.text())
@@ -2822,6 +2813,24 @@ class main_wnd_UI(QMainWindow) :
     
     def ser_stop (self) :
         self.ui.ser_view.play(0)
+        
+    
+    def ser_trame_cursor_sig_dragged(self) :
+        pos= int(self.v_bar_pro.value())
+        self.ser_view_profil(pos)
+        try :
+            if self.mypoint.scene() is self.ui.ser_raw_view.getView().scene():
+                self.ui.ser_raw_view.view.removeItem(self.mypoint)
+            if self.flag_raw :
+                # point rouge
+                self.mypoint=QGraphicsEllipseItem(0,0,6,6)
+                self.mypoint.setPen(pg.mkPen(color=(250, 120, 0), width=12))
+                self.mypoint.setPos(self.ui.ser_view.currentIndex-3, pos-3)
+                self.ui.ser_raw_view.view.addItem(self.mypoint)  
+        except :
+            pass
+        
+        
     
     def ser_raw_cursor_sig_dragged(self):
         if self.flag_raw :
@@ -2832,7 +2841,33 @@ class main_wnd_UI(QMainWindow) :
                     self.ui.ser_raw_view.view.removeItem(self.mypoint)
             except :
                 pass
-    
+            
+    def ser_view_profil(self, x) :
+        
+        try :
+            # recupere le profil spectral 
+            trame_index=self.ui.ser_view.currentIndex
+            spectre_img=self.ui.ser_view.image
+            my_trame = spectre_img[trame_index]
+            ih = spectre_img[trame_index].shape[1]
+            iw = spectre_img[trame_index].shape[0]
+            
+            # test si dans image
+            if x >=0 and x<= iw :
+                
+                lamb=np.arange (0,ih)
+                profil=my_trame[x:x+1,:][0]
+                self.ser_posx = x
+                
+                # affiche profile
+                self.ui.spectre_view.clear()
+                self.ui.spectre_view.setBackground('w')
+                pen=pg.mkPen(color='blue',width=1.5)
+                profile_name= 'Trame '+ str(trame_index)
+                self.myplot = self.ui.spectre_view.plot(lamb, profil, pen=pen, name=profile_name, maxTickLength=-100)
+        except :
+            print(trame_index,x, ih, iw)
+
     def ser_posx_prev (self) :
         x=self.ser_posx - 1
         # recupere le profil spectral 
@@ -2863,15 +2898,10 @@ class main_wnd_UI(QMainWindow) :
             pen=pg.mkPen(color='blue',width=1.5)
             profile_name= 'Trame '+ str(trame_index)
             self.myplot = self.ui.spectre_view.plot(lamb, profil, pen=pen, name=profile_name, maxTickLength=-100, autoLevels=False)
+            
             # affiche ligne verticale sur le fichier ser
-            try :
-                if self.myline.scene() is  self.ui.ser_view.getView().scene() :
-                    self.ui.ser_view.view.removeItem(self.myline)  
-            except :
-                pass
-            self.myline=QGraphicsLineItem(x,0,x,ih)
-            self.myline.setPen(pg.mkPen(color=(0, 150, 0), width=2))
-            self.ui.ser_view.view.addItem(self.myline)  
+            self.v_bar_pro.setPos(x)
+
     
     def ser_posx_next(self) :
         x=self.ser_posx + 1
@@ -2905,15 +2935,8 @@ class main_wnd_UI(QMainWindow) :
             profile_name= 'Trame '+ str(trame_index)
             self.myplot = self.ui.spectre_view.plot(lamb, profil, pen=pen, name=profile_name, maxTickLength=-100, autoLevels=False)
             # affiche ligne verticale sur le fichier ser
-            try :
-                if self.myline.scene() is  self.ui.ser_view.getView().scene() :
-                    self.ui.ser_view.view.removeItem(self.myline)  
-            except :
-                pass
-            self.myline=QGraphicsLineItem(x,0,x,ih)
-            self.myline.setPen(pg.mkPen(color=(0, 150, 0), width=2))
-            self.ui.ser_view.view.addItem(self.myline)  
-            
+            self.v_bar_pro.setPos(x)
+
     # tab proc
     #-------------------------------------------------------------------------
     
@@ -3997,7 +4020,6 @@ class main_wnd_UI(QMainWindow) :
     # fonctions utilitaires
     #--------------------------------------------------------------------------
      
-    
     
     def read_fits_image(self, file_name):
         with fits.open(file_name,memmap=False) as hdul:
