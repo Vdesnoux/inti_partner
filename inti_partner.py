@@ -88,10 +88,10 @@ Version 0.8 - Aout 2025
 - ajout infinite line sur ser pour defile profile avec trame et souris
 - ajout d'un saveas trame dans onglet ser
 - ajout correction bandes vert dans magnet
+- annotations disque partiel
 
 """
-
-# TODO : annot disque partiel
+# TODO : resize sur les diam de disque pour animation
 # TODO : saveas annotation image carré, zoom, juste un coin
 
 # IDEAS: lire infos comme date et heure image, ser
@@ -2114,7 +2114,7 @@ class main_wnd_UI(QMainWindow) :
             self.myROI=pg.RectROI((ih-50,iw-50), (100,100), centered=False, sideScalers=True)
             self.ui.anim_image_view.addItem(self.myROI)
             
-    def anim_crop (self) :
+    def anim_crop (self) :  # aka prepare animation
         if self.myROI :
             # ROI pos x,y
             x1=int(self.myROI.pos()[0])+1
@@ -3380,9 +3380,9 @@ class main_wnd_UI(QMainWindow) :
                 img_grid, hdr=self.read_fits_image(self.file_grid)
                 img_grid=np.array(img_grid,dtype='uint16')              
            
-            img_grid = np.fliplr(np.rot90(img_grid, 3))
-            self.image_data=np.copy(img_grid)
-            self.ui.grid_view.setImage(img_grid)
+            img_grid2 = np.fliplr(np.rot90(img_grid, 3))
+            self.image_data=np.copy(img_grid2)
+            self.ui.grid_view.setImage(img_grid2)
             try :
                 if self.ext_grid == "fits" :
                     mydate=hdr['DATE-OBS']
@@ -3400,7 +3400,7 @@ class main_wnd_UI(QMainWindow) :
                     mydate=dateutc[0]+'T'+dateutc[1]
                 self.ui.grid_date_text.setText(mydate)
                 angP, paramB0, longL0, RotCarr = angle_P_B0(mydate)
-                self.ui.grid_angP_text.setText(angP)
+                #self.ui.grid_angP_text.setText(angP)
             except :
                 pass
             
@@ -3814,6 +3814,9 @@ class main_wnd_UI(QMainWindow) :
                 xc=int(cx)
                 yc=int(cy)
                 rsun_pixels = int(sr)
+                if cy == 0 or sr == 0 :
+                    print (self.tr("Erreur lecture rayon disque solaire"))
+                    return
         except :
             print (self.tr("Erreur lecture rayon disque solaire"))
         
@@ -3823,6 +3826,11 @@ class main_wnd_UI(QMainWindow) :
         angle_step_deg = 1  # résolution angulaire
         step_km = 50000  # espacement des arc de cercle
         km_per_pixel = rsun_km / rsun_pixels
+        
+        # offset si disque partiel
+        ih, iw = self.img_grid.shape
+        #x0= xc-(iw//2)
+        yc0= ih-yc
 
         self.ui.grid_view.getView().setAspectLocked(True)
         # Créer une police plus petite
@@ -3848,7 +3856,7 @@ class main_wnd_UI(QMainWindow) :
             for angle_deg in range(start_deg, end_deg + 1, angle_step_deg):
                 theta = math.radians(angle_deg)
                 x = xc + r_pix * math.cos(theta)
-                y = yc - r_pix * math.sin(theta)  # y vers le bas
+                y = yc0 - r_pix * math.sin(theta)  # y vers le bas
                 if first:
                     path.moveTo(x, y)
                     first = False
@@ -3856,7 +3864,7 @@ class main_wnd_UI(QMainWindow) :
                     path.lineTo(x, y)
                        
             x_lab =  xc + (r_pix * math.cos(math.radians(start_deg)))
-            y_lab = yc - (r_pix * math.sin(math.radians(start_deg)))      
+            y_lab = yc0 - (r_pix * math.sin(math.radians(start_deg)))      
             
             arc_item = QGraphicsPathItem(path)
             arc_item.setPen(pg.mkPen(QtGui.QColor(150, 150, 150) , width=1))
@@ -3872,9 +3880,9 @@ class main_wnd_UI(QMainWindow) :
             # Ajoute un label à l’extrémité
             if mid_deg2 >=0 and mid_deg2<=90:
                 my_anchor =(0,0.5)
-            elif mid_deg2>90 and mid_deg2<180 :
+            elif mid_deg2>90 and mid_deg2<=180 :
                 my_anchor =(0,0.5)  # my_anchor =(1,0)
-            elif mid_deg2 >180 and mid_deg2 <270 :
+            elif mid_deg2 >180 and mid_deg2 <=270 :
                 my_anchor = (0,0.5) # my_anchor = (1,1)
             elif mid_deg2>270 and mid_deg2 <360  :
                 my_anchor = (0,0.5) # my_anchor = (0,1)
@@ -3899,11 +3907,13 @@ class main_wnd_UI(QMainWindow) :
         
         # Coordonnées du point de départ
         x_start = xc + r_start * math.cos(mid_theta)
-        y_start = yc - r_start * math.sin(mid_theta)
+        y_start = yc0 - r_start * math.sin(mid_theta)
+
         
         # Coordonnées du point d’arrivée
         x_end = xc + r_end * math.cos(mid_theta)
-        y_end = yc - r_end * math.sin(mid_theta)
+        y_end = yc0 - r_end * math.sin(mid_theta)
+        
         
         # Tracer la ligne
         from PySide6.QtWidgets import QGraphicsLineItem
@@ -5217,11 +5227,20 @@ def template_locate (img_r, temp_r) :
 def get_baseline (f) :
     f_short=os.path.split(f)[1]
     f_path=os.path.split(f)[0]
+    f_short = f_short.removeprefix('st')
+    f_short = f_short.removeprefix('cr')
+    f=f_path+os.sep+f_short
+    
+    """
     prefix=f_short.rfind('st')
     if prefix != -1 :
         f_short=f_short[2:]
         f=f_path+os.sep+f_short
-        
+    prefix=f_short.rfind('cr')
+    if prefix != -1 :
+        f_short=f_short[2:]
+        f=f_path+os.sep+f_short
+    """   
     index=-1
     if f.rfind('_dp') !=1 :
         index=f.rfind('_dp')
