@@ -10,15 +10,18 @@ Author : Valerie Desnoux
 import sys
 import os, fnmatch
 import yaml as yaml
-import pyqtgraph as pg
-from pyqtgraph.exporters import ImageExporter
-from pyqtgraph import ImageView, PlotWidget, LinearRegionItem
+
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QApplication,QMenu,QGraphicsPathItem, QGraphicsPixmapItem,QMainWindow,QDialog, QDockWidget, QFileDialog,QMessageBox, QTableWidgetItem, QWidget,QGraphicsLineItem, QListWidgetItem, QVBoxLayout,QGraphicsEllipseItem
 from PySide6.QtCore import QFile, QIODevice, Qt, QSettings, QTimer,QTranslator, QUrl, QRect, Signal, QPoint
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6 import QtGui
+
+import pyqtgraph as pg
+from pyqtgraph.exporters import ImageExporter
+from pyqtgraph import ImageView, PlotWidget, LinearRegionItem
+
 from astropy.io import fits
 import astropy.time
 import numpy as np
@@ -38,6 +41,8 @@ from serfilesreader_vhd import Serfile # Version custom pour ecriture fichier SE
 
 from skimage.segmentation import disk_level_set
 from skimage.util import invert
+import shutil
+import re
 
 import requests
 import subprocess
@@ -90,18 +95,21 @@ Version 0.8 - Aout 2025
 - ajout correction bandes vert dans magnet
 - annotations disque partiel
 
+Version 0.9 - sept 2025
+- ajout sauvegarde de fichiers log sur new image
+- nouveau get_baseline
+- format date sans les millisecondes
+- acceleration lecture ser
+- bug fix selection pattern propagation
+- trad refaite
+
+Version 1.0 - sept 25
+- fix bug map selectionline et erase lines
+
 """
-# TODO : resize sur les diam de disque pour animation
-# TODO : saveas annotation image carré, zoom, juste un coin
 
-# IDEAS: lire infos comme date et heure image, ser
-# IDEAS: lecture ser en memmap 
-# IDEAS: effacer un fichier, effacer tous ser et famille de la racine
-# IDEAS: popup demande de la date, ou du rayon si ne trouve pas le fichier log 
-# IDEAS: prendre rotation en compte dans magnet
-# IDEAS: ajout carte synoptique
-# IDEAS: save png avec seuils
-
+# efface le rectangle rouge dans map sur nouvelle localisation
+# apres un reset, goto line ne marche plus...
 
 
 class main_wnd_UI(QMainWindow) :
@@ -110,7 +118,7 @@ class main_wnd_UI(QMainWindow) :
         #super().__init__(parent)
         super(main_wnd_UI, self).__init__()
         
-        self.version ="0.8"
+        self.version ="1.0"
         
         #fichier GUI par Qt Designer
         loader = QUiLoader()
@@ -161,6 +169,8 @@ class main_wnd_UI(QMainWindow) :
         self.label_list=[]
         self.line_list=[]
         self.terre_list=[]
+        
+        self.cropped = False
     
         
         # connecte les signaux
@@ -318,7 +328,8 @@ class main_wnd_UI(QMainWindow) :
         self.ui.map_image_color_view.ui.histogram.hide()  
         
         self.ui.map_reset_btn.clicked.connect(self.map_reset)
-        self.ui.map_goto_combo.currentTextChanged.connect(self.map_goto)
+        #self.ui.map_goto_combo.currentTextChanged.connect(self.map_goto)
+        self.ui.map_goto_combo.activated[int].connect(self.map_goto)
         self.ui.map_open_btn.clicked.connect(self.map_image_open)
         self.ui.map_localise_btn.clicked.connect(self.map_localize)
         
@@ -560,6 +571,7 @@ class main_wnd_UI(QMainWindow) :
 
         # tab viewer
         if index == 0 or index ==1 :
+            QTimer.singleShot(10, lambda: self.ui.select_image_view_ref.getView().autoRange())
             # si deja images alors ne pas relire le repertoire
             if self.working_dir !='' and self.ui.img_list_view.count() == 0:
                 self.ui.select_list_files.clear()
@@ -568,6 +580,7 @@ class main_wnd_UI(QMainWindow) :
                 self.selected_files=[]
                 self.select_read()
                 self.view_radio_clicked()
+                
 
 
     def read_ini(self) :
@@ -865,12 +878,18 @@ class main_wnd_UI(QMainWindow) :
                 Width = int(scan.getWidth())          #      return width of a frame
                 Height = int(scan.getHeight())       #      return height of a frame
                 self.ser_hdr = scan.getHeader()
-                
+                Frame_start = self.FrameCount//4
+                bitdepth=scan.getHeader()['PixelDepthPerPlane']
+                dtype=np.uint16
+                if bitdepth==8:
+                    dtype = np.uint8#      return height of a frame
+
+                """
                 # forme le volume de data 
                 # initialize le tableau qui recevra l'image somme de toutes les trames
                 # garde une copie des trames originales si on veut trimmer le fichier
                 FrameIndex=0
-                Frame_start = self.FrameCount//4
+                
                 ser_volume=np.zeros((self.FrameCount,Height, Width),dtype='uint16')
                 
                 while FrameIndex < self.FrameCount:
@@ -884,7 +903,21 @@ class main_wnd_UI(QMainWindow) :
                     ser_volume[FrameIndex]=num_raw
                     #increment la trame et l'offset pour lire trame suivant du fichier .ser
                     FrameIndex=FrameIndex+1
-            
+                """
+                # Charger toutes les trames dans un tableau NumPy en RAM
+                data_offset=178
+                frame_size = Width * Height
+                
+                with open(self.file_view, "rb") as f:
+                    f.seek(data_offset)  # sauter l'entête
+                    frames = np.fromfile(f, dtype=dtype, count=self.FrameCount * frame_size)
+                
+                if bitdepth == 8 :
+                    frames = frames * 256
+                    
+                # Reshape en (n_frames, height, width)
+                ser_volume = frames.reshape((self.FrameCount, Height, Width))
+                 
             except:
                 print(self.tr('Erreur ouverture fichier : ')+self.file_view)
         
@@ -1060,9 +1093,39 @@ class main_wnd_UI(QMainWindow) :
         self.stack_dir=self.working_dir
         file_list=[]
         self.file_list=[]
+        
+        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
+        filtres_mapping = {
+            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
+            "*.png":       self.tr("Tous les fichiers png (*.png)"),
+            "*_recon.fits" : self.tr("Fichiers recon fits (*_recon.fits)"),
+            "*_free.fit*" : self.tr("Fichiers free fits (*_free.fits"),
+            "*.fits" : self.tr("Fichiers fits (*fits)")
+
+        }
+    
+        # Définition de la liste complète des filtres
+        filtres = ";;".join([
+            self.tr("Tous les fichiers png (*.png)"),
+            self.tr("Fichiers disk png (*_disk.png)"),
+            self.tr("Fichiers protus png (*_protus.png)"),
+            self.tr("Fichiers clahe png (*_clahe.png)"),
+            self.tr("Fichiers free (*_free.png)"),
+            self.tr("Fichiers recon fits (*_recon.fits)"),
+            self.tr("Fichiers free fits (*_free.fits"),
+            self.tr("Fichiers fits (*fits)")
+        ])
+    
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
+
+        
         self.ui.stack_image_view.clear()
         #file_list = QFileDialog.getOpenFileNames(self, "Selectionner Imges", self.stack_dir, "Fichiers png (*.png);; Fichiers FITS (*.fits *.fit);;Tous les fichiers (*)")
-        file_list = QFileDialog.getOpenFileNames(self,self.tr( "Selectionner Images"), self.stack_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers clahe png (*_clahe.png);;Fichiers free (*_free.png);;Fichiers recon fits (*_recon.fits);;Fichiers free fits (*_free.fits);;Fichiers fits (*.fits)"), self.pattern)
+        file_list = QFileDialog.getOpenFileNames(self,self.tr( "Selectionner Images"), self.stack_dir, filtres, filtre_defaut)
         self.pattern = file_list[1]
         
         if len(file_list[0]) !=0  :
@@ -1298,6 +1361,9 @@ class main_wnd_UI(QMainWindow) :
         f0=self.short_name(self.file_list[0]).split('.')[0]
         f1=self.short_name(self.file_list[-1]).split('.')[0][1:]
         root_name=f0+'-'+ f1
+        log_name = self.short_name(get_baseline(f0))
+        if file_exist(self.working_dir+os.sep+log_name+'_log.txt') :
+            shutil.copy(self.working_dir+os.sep+log_name+"_log.txt", self.working_dir+os.sep+root_name+"_stack_log.txt")
         file_corrected=self.working_dir+os.sep+root_name+'_stack.fits'
         fits.writeto(file_corrected, im16, overwrite=True)
         im16=im16.astype(np.uint16)
@@ -1358,6 +1424,9 @@ class main_wnd_UI(QMainWindow) :
             if second_pattern != 'None' and not seq_error :
                 self.file_result.append(second_file_list[0])
                 self.file_name_result.append(self.short_name(second_file_list[0]))
+                # cree un fichier log
+                if file_exist(self.working_dir+os.sep+log_name+'_log.txt') :
+                    shutil.copy(self.working_dir+os.sep+log_name+"_log.txt", self.working_dir+os.sep+root_name+"_stack_second_log.txt")
                 # sauve second image stackked
                 file_corrected=self.working_dir+os.sep+root_name+'_stack_second.fits'
                 fits.writeto(file_corrected, im16_second, overwrite=True)
@@ -1635,7 +1704,7 @@ class main_wnd_UI(QMainWindow) :
             self.ui.img_list_view.clear()
     
     def select_read (self):
-        
+        self.ui.select_list_files.clear()
         self.pattern=self.ui.select_pattern_combo.currentText()
         self.select_files=fnmatch.filter(os.listdir(self.working_dir), self.pattern) # ce sont les short name
         
@@ -1646,6 +1715,7 @@ class main_wnd_UI(QMainWindow) :
             
     def select_pattern_clicked (self) :
         self.select_pattern=self.ui.select_pattern_combo.currentText()
+        self.pattern = self.select_pattern
         self.ui.select_list_files.clear()
         self.ui.select_files_sel_list.clear()
         self.iqm_list=[]
@@ -1654,7 +1724,9 @@ class main_wnd_UI(QMainWindow) :
             if self.select_files : 
                 self.refresh_select_list()
         except :
+            #print("select ", self.select_pattern)
             pass
+            
     
     
     def refresh_select_list(self):
@@ -1686,7 +1758,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.select_file_lbl.setText(self.select_files[0]+' '+self.iqm_list[0][0])
         
         # se place en viewall mais il faut attendre que l'image se charge dans cycle Qt
-        QTimer.singleShot(10, lambda: self.ui.select_image_view_ref.getView().autoRange())
+        QTimer.singleShot(50, lambda: self.ui.select_image_view_ref.getView().autoRange())
 
             
     def display_select_image_png(self, file_sh_name, viewport) :
@@ -1859,9 +1931,39 @@ class main_wnd_UI(QMainWindow) :
     def mosa_img_open_clicked (self):
         self.mosa_dir=self.working_dir
         file_list=[]
+        
+        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
+        filtres_mapping = {
+            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
+            "*.png":       self.tr("Tous les fichiers png (*.png)"),
+            "*_recon.fits" : self.tr("Fichiers recon fits (*_recon.fits)"),
+            "*.fits" : self.tr("Fichiers fits (*fits)"),
+            "*.*" : self.tr("Tous les fichiers")
+            
+        }
+    
+        # Définition de la liste complète des filtres
+        filtres = ";;".join([
+            self.tr("Tous les fichiers png (*.png)"),
+            self.tr("Fichiers disk png (*_disk.png)"),
+            self.tr("Fichiers protus png (*_protus.png)"),
+            self.tr("Fichiers clahe png (*_clahe.png)"),
+            self.tr("Fichiers free (*_free.png)"),
+            self.tr("Fichiers recon fits (*_recon.fits)"),
+            self.tr("Fichiers fits (*fits)"),
+            self.tr("Tous les fichiers")
+        ])
+    
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
+
+        
         self.ui.mosa_image_view.clear()
         #file_list = QFileDialog.getOpenFileNames(self, "Selectionner Imges", self.stack_dir, "Fichiers png (*.png);; Fichiers FITS (*.fits *.fit);;Tous les fichiers (*)")
-        file_list = QFileDialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.mosa_dir, self.tr("Fichiers png (*.png);;Fichiers disk.png (*_disk.png);;Fichiers protus.png (*_protus.png);;Fichiers clahe.png (*_clahe.png);;Fichiers recon fits (*_recon.fits);;Fichiers fits (*.fits);;Tous les fichiers (*)"), self.pattern)
+        file_list = QFileDialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.mosa_dir, filtres, filtre_defaut)
         self.pattern =file_list[1]
         if file_list[0] != [] :
             self.file_list_mosa=file_list[0]
@@ -1984,7 +2086,30 @@ class main_wnd_UI(QMainWindow) :
         self.ui.anim_stacked_widget.setCurrentIndex(0)
         file_list=[]
         self.ui.anim_image_view.clear()
-        file_list = anim_file_dialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus (*_protus.png);;Fichiers clahe png (*_clahe.png);;Fichiers free (*_free.png);;Tous les fichiers (*)"),self.pattern)
+        
+        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
+        filtres_mapping = {
+            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
+            "*.png":       self.tr("Tous les fichiers png (*.png)")
+        }
+    
+        # Définition de la liste complète des filtres
+        filtres = ";;".join([
+            self.tr("Tous les fichiers png (*.png)"),
+            self.tr("Fichiers disk png (*_disk.png)"),
+            self.tr("Fichiers protus png (*_protus.png)"),
+            self.tr("Fichiers clahe png (*_clahe.png)"),
+            self.tr("Fichiers free (*_free.png)")
+        ])
+    
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
+    
+        
+        file_list = anim_file_dialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, filtres,filtre_defaut)
         self.pattern = file_list[1]
         if len(file_list[0]) != 0 :
             self.ui.anim_list.clear()
@@ -2003,7 +2128,29 @@ class main_wnd_UI(QMainWindow) :
 
     def anim_add_img (self):
         file_add_list=[]
-        file_add_list = QFileDialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus (*_protus.png);;Fichiers clahe (*_clahe.png);;Fichiers free (*_free.png);;Tous les fichiers (*)"), self.pattern)
+        
+        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
+        filtres_mapping = {
+            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
+            "*.png":       self.tr("Tous les fichiers png (*.png)")
+        }
+    
+        # Définition de la liste complète des filtres
+        filtres = ";;".join([
+            self.tr("Tous les fichiers png (*.png)"),
+            self.tr("Fichiers disk png (*_disk.png)"),
+            self.tr("Fichiers protus png (*_protus.png)"),
+            self.tr("Fichiers clahe png (*_clahe.png)"),
+            self.tr("Fichiers free (*_free.png)")
+        ])
+    
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
+        
+        file_add_list = QFileDialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, filtres, filtre_defaut)
         file_add_list=file_add_list[0]
         self.file_list_anim.extend (file_add_list)
         file_add_names=[]
@@ -2428,6 +2575,13 @@ class main_wnd_UI(QMainWindow) :
         line_pos=[0,200,6500,8500,9300,13300,16000, 17000,18500]
         index=self.ui.map_goto_combo.currentIndex()
         self.ui.map_image_ref_view.view.setRange(xRange=[200,self.map_iw], yRange=[line_pos[index],line_pos[index]+1500], padding=0)
+        try :
+            if self.line1.scene() is  self.ui.map_image_ref_view.getView().scene() :
+                self.ui.map_image_ref_view.removeItem(self.line1)
+                self.ui.map_image_ref_view.removeItem(self.line2)
+        except :
+            pass
+        self.update_zone_color(line_pos[index], 1500)
         
     def map_image_open (self) :
         self.file_map =''
@@ -2465,16 +2619,38 @@ class main_wnd_UI(QMainWindow) :
         self.ui.map_image_ref_view.view.setRange(xRange=[200,self.map_iw], yRange=[starty1,starty1+1500], padding=0)
         
         # zone spectre anotation
-        line=QGraphicsLineItem(200,startY,self.map_iw,startY)
-        line.setPen(pg.mkPen(color=(200, 0, 0), width=4))
-        line.setZValue(1000)
-        self.ui.map_image_ref_view.view.addItem(line)  
-        line=QGraphicsLineItem(200,startY+zih,self.map_iw,startY+zih)
-        line.setPen(pg.mkPen(color=(200, 0, 0), width=4))
-        line.setZValue(1000)
-        self.ui.map_image_ref_view.view.addItem(line)  
+        try :
+            if self.line1.scene() is  self.ui.map_image_ref_view.getView().scene() :
+                self.ui.map_image_ref_view.removeItem(self.line1)
+                self.ui.map_image_ref_view.removeItem(self.line2)
+        except :
+            pass
         
+        self.line1=QGraphicsLineItem(200,startY,self.map_iw,startY)
+        self.line1.setPen(pg.mkPen(color=(200, 0, 0), width=4))
+        self.line1.setZValue(1000)
+        self.ui.map_image_ref_view.view.addItem(self.line1)  
+        self.line2=QGraphicsLineItem(200,startY+zih,self.map_iw,startY+zih)
+        self.line2.setPen(pg.mkPen(color=(200, 0, 0), width=4))
+        self.line2.setZValue(1000)
+        self.ui.map_image_ref_view.view.addItem(self.line2)  
+        
+        self.update_zone_color (startY, zih)
+        
+        zone_crop=img_r[startY:startY+zih,:]
+        # display zone trouvée
+        q_img = QtGui.QImage(zone_crop, zone_crop.shape[1], zone_crop.shape[0],QtGui.QImage.Format.Format_Grayscale8)
+        pix = QtGui.QPixmap.fromImage(q_img)
+        s=self.ui.map_img_found_lbl.size()
+        pixmap = pix.scaled(s.width(),s.height(),Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.FastTransformation)  
+        self.ui.map_img_found_lbl.setPixmap(pixmap)
+        self.ui.map_img_found_lbl.setScaledContents(True)
+        
+    def update_zone_color (self, startY, zih):
         # zone spectre couleur
+        # startY debut de la zone sur le grand spectre
+        # zih hauteur de la zone
+             
         ratio=self.map_color_iw/self.map_ih
         try :
             if self.lineA.scene() is  self.ui.map_image_color_view.getView().scene() :
@@ -2490,15 +2666,6 @@ class main_wnd_UI(QMainWindow) :
         self.lineB.setPen(pg.mkPen(color=(255, 255, 255), width=4))
         self.lineB.setZValue(1000)
         self.ui.map_image_color_view.view.addItem(self.lineB) 
-        
-        zone_crop=img_r[startY:startY+zih,:]
-        # display zone trouvée
-        q_img = QtGui.QImage(zone_crop, zone_crop.shape[1], zone_crop.shape[0],QtGui.QImage.Format.Format_Grayscale8)
-        pix = QtGui.QPixmap.fromImage(q_img)
-        s=self.ui.map_img_found_lbl.size()
-        pixmap = pix.scaled(s.width(),s.height(),Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.FastTransformation)  
-        self.ui.map_img_found_lbl.setPixmap(pixmap)
-        self.ui.map_img_found_lbl.setScaledContents(True)
         
     # tab magnet
     #-------------------------------------------------------------------------
@@ -2622,6 +2789,7 @@ class main_wnd_UI(QMainWindow) :
                     self.ui.mag_results_list.addItem(self.short_name(f_png[i]))
                     self.file_results.append(f_png[i])
                 self.ui.mag_results_list.setCurrentRow(0)
+
                 
     
     def mag_corrige_bandes (self, img) : 
@@ -2678,28 +2846,28 @@ class main_wnd_UI(QMainWindow) :
         
             self.FrameCount = scan.getLength()    #      return number of frame in SER file.
             Width = int(scan.getWidth())          #      return width of a frame
-            Height = int(scan.getHeight())        #      return height of a frame
+            Height = int(scan.getHeight())
+            bitdepth=scan.getHeader()['PixelDepthPerPlane']
+            dtype=np.uint16
+            if bitdepth==8:
+                dtype = np.uint8#      return height of a frame
             self.ser_hdr = scan.getHeader()
+            #print(self.ser_hdr)
             
-            # forme le volume de data 
-            # initialize le tableau qui recevra l'image somme de toutes les trames
-            # garde une copie des trames originales si on veut trimmer le fichier
-            FrameIndex=0
-            ser_volume=np.zeros((self.FrameCount,Width, Height),dtype='uint16')
-            self.ser_raw=np.zeros((self.FrameCount,Height, Width),dtype='uint16')
+            # Charger toutes les trames dans un tableau NumPy en RAM
+            data_offset=178
+            frame_size = Width * Height
             
-            while FrameIndex < self.FrameCount:
-                try :
-                    num_raw = scan.readFrameAtPos(FrameIndex)
-                    num=np.flipud(np.rot90(num_raw))
-                except:
-                    print(FrameIndex)
-    
-                # ajoute la trame au volume
-                ser_volume[FrameIndex]=num
-                self.ser_raw[FrameIndex]=num_raw
-                #increment la trame et l'offset pour lire trame suivant du fichier .ser
-                FrameIndex=FrameIndex+1
+            with open(self.file_ser, "rb") as f:
+                f.seek(data_offset)  # sauter l'entête
+                frames = np.fromfile(f, dtype=dtype, count=self.FrameCount * frame_size)
+            
+            if bitdepth == 8 :
+                frames = frames * 256
+                
+            # Reshape en (n_frames, height, width)
+            self.ser_raw = frames.reshape((self.FrameCount, Height, Width))
+            ser_volume = np.flip(self.ser_raw.swapaxes(1, 2), axis=1)
             
             self.ui.ser_view.setImage(ser_volume)
             mid_pos= self.ui.ser_view.image.shape[1]//2
@@ -2783,12 +2951,11 @@ class main_wnd_UI(QMainWindow) :
         # test crop ser
         filename_trim,_=QFileDialog.getSaveFileName(self, self.tr("Sauver fichier ser"), self.working_dir, self.tr("Fichiers ser (*.ser)"))
         if filename_trim :
-            scan_crop = Serfile(self.working_dir+os.sep+'ser_crop.ser', True, self.ser_hdr)
+            scan_crop = Serfile(filename_trim, True, self.ser_hdr)
             scan_crop.createNewHeader(self.ser_hdr)
             f=self.ser_raw[trame_deb:trame_fin+1,:,:]
             scan_crop.addFrames(f)        
-            fr=scan_crop.getLength()
-            print("write ser trim : ", fr)
+            #fr=scan_crop.getLength()
             print(filename_trim)
 
             
@@ -2942,13 +3109,44 @@ class main_wnd_UI(QMainWindow) :
     
     def proc_open (self) :
         self.file_proc =''
-        file_proc = QFileDialog.getOpenFileName(self, "Selectionner image ", self.working_dir, "Tous les fichiers png (*.png);;Fichiers disk png (*_disk.png);;Fichiers protus png (*_protus.png);;Fichiers clahe png (*_clahe.png);;Fichiers free (*_free.png);;Fichiers recon fits (*_recon*.fits);;Fichiers free fits (*_free.fits);;Fichiers cont fits (*_cont*.fits);;Fichiers fits (*.fits)",self.pattern)
+        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
+        filtres_mapping = {
+            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
+            "*_recon*.fits": self.tr("Fichiers recon fits (*_recon*.fits)"),
+            "*_free.fits":  self.tr("Fichiers free fits (*_free.fits)"),
+            "*_cont*.fits": self.tr("Fichiers cont fits (*_cont*.fits)"),
+            "*.fits":      self.tr("Fichiers fits (*.fits)"),
+            "*.png":       self.tr("Tous les fichiers png (*.png)")
+        }
+    
+        # Définition de la liste complète des filtres
+        filtres = ";;".join([
+            self.tr("Tous les fichiers png (*.png)"),
+            self.tr("Fichiers disk png (*_disk.png)"),
+            self.tr("Fichiers protus png (*_protus.png)"),
+            self.tr("Fichiers clahe png (*_clahe.png)"),
+            self.tr("Fichiers free (*_free.png)"),
+            self.tr("Fichiers recon fits (*_recon*.fits)"),
+            self.tr("Fichiers free fits (*_free.fits)"),
+            self.tr("Fichiers cont fits (*_cont*.fits)"),
+            self.tr("Fichiers fits (*.fits)")
+        ])
+    
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
+        
+        file_proc = QFileDialog.getOpenFileName(self, "Selectionner image ", self.working_dir, filtres ,filtre_defaut)
         self.pattern = file_proc[1]
         if file_proc[0] != '' :
             self.file_proc=file_proc[0]
             self.proc_read()
-            self.file_grid=self.file_proc
-            self.grid_read()
+            #self.file_grid=self.file_proc
+            #self.grid_read()
+            self.log_name = self.get_log_file(self.file_proc)
+            
             
     def proc_read (self):
             self.working_dir= self.get_dirpath(self.file_proc)
@@ -3018,23 +3216,18 @@ class main_wnd_UI(QMainWindow) :
                 
                 if self.ext_proc == "png" :
                     # rotation autour du centre de l'image
+                    
                     try :
-                        baseline = os.path.basename(get_baseline(os.path.splitext(self.file_proc)[0]))
-                        self.file_proc_log=self.working_dir+os.sep+baseline+"_log.txt"
+                        self.file_proc_log= self.get_log_file(self.file_proc)                          
                         
-                        if not os.path.exists(self.file_proc_log):
-                            # remonte d'un cran le chemin
-                            parent_path = Path(self.working_dir).parent
-                            self.file_proc_log=str(parent_path)+os.sep+baseline+"_log.txt"
-                            
-                        #self.file_proc_log = get_baseline(os.path.splitext(self.file_proc)[0]) + "_log.txt"
                         cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_proc_log)
                         diam=int(int(sr)*2)
+                        cx = img_proc.shape[1]//2 
+                        cy = img_proc.shape[0]//2
+                        img_rot = img_rotate(img_proc, ang_rot, int(cx), int(cy), int(diam))
                     except :
                         diam=0
-                    cx = img_proc.shape[1]//2 
-                    cy = img_proc.shape[0]//2
-                    img_rot = img_rotate(img_proc, ang_rot, int(cx), int(cy), int(diam))
+                        img_rot=img_proc                
                     
                 else :
                     try :
@@ -3048,6 +3241,7 @@ class main_wnd_UI(QMainWindow) :
                         img_rot = img_rotate(img_proc, ang_rot, int(cx), int(cy), diam)
                     except :
                         print(self.tr('Erreur fits'))
+                        img_rot=img_proc   
                        
                 img_proc= np.copy(img_rot)
                 #self.ui.proc_view.setImage(img_rot,autoRange=False)
@@ -3210,10 +3404,13 @@ class main_wnd_UI(QMainWindow) :
             self.myROI=pg.RectROI((cx-(new_iw),cy-(new_ih)), (2*new_iw,2*new_ih), centered=False,sideScalers=False, movable=False, resizable=False, rotatable=False)
             self.myROI.removeHandle(0)
             self.ui.proc_view.addItem(self.myROI)
+            
                   
     
     def proc_crop (self) :
         error=False
+        self.cropped=False
+        
         if self.myROI !=[] :
             if self.myROI.scene() is  self.ui.proc_view.getView().scene() :
                 self.ui.proc_view.removeItem(self.myROI)
@@ -3245,13 +3442,14 @@ class main_wnd_UI(QMainWindow) :
             self.ui.proc_view.setImage(flip_crop_img,autoRange=False)
             self.ui.proc_img_width_lbl.setText(str(new_iw*2))
             self.ui.proc_img_height_lbl.setText(str(new_ih*2))
+            self.cropped=True
         
         
     def proc_saveas (self) :
         file_name,_=QFileDialog.getSaveFileName(self, self.tr("Sauver fichier "), self.working_dir, self.tr("Fichiers png (*.png);;Fichiers fits (*.fits) "))
         ext=self.get_extension(file_name)
         if file_name :
-            print(file_name+' '+ext)
+            #print(file_name+' '+ext)
             myimage=self.ui.proc_view.image
             if ext == 'png' :
                 levels= self.ui.proc_view.getLevels()
@@ -3267,6 +3465,9 @@ class main_wnd_UI(QMainWindow) :
                     myimage=cv2.cvtColor(myimage, cv2.COLOR_BGR2RGB)
                 
                 cv2.imwrite(file_name, myimage)
+                if not self.cropped :
+                    if file_exist(self.log_name) :
+                        shutil.copy (self.log_name, os.path.splitext(file_name)[0]+"_log.txt")
             if ext == 'fits' :
                 if len(myimage.shape)==3 :
                     print(self.tr("Fichier couleur, pas de conversion fits"))
@@ -3287,18 +3488,18 @@ class main_wnd_UI(QMainWindow) :
                     
                     myimage=(np.rot90(myimage))
                     self.save_fits_image(file_name, myimage, hdr, nb_bytes=16)
-
+                    if not self.cropped :
+                        if file_exist(self.working_dir+os.sep+self.log_name+'_log.txt') :
+                            shutil.copy (self.working_dir+os.sep+self.log_name+'_log.txt', os.path.splitext(file_name)[0]+"_log.txt")
+            
+            # on anticipe le chargement du fichier sauvé dans grid
+            self.file_grid=file_name
+            self.grid_read()
             
     def proc_angP (self) :
         if self.ext_proc == 'png' :
             try :
-                baseline = os.path.basename(get_baseline(os.path.splitext(self.file_proc)[0]))
-                self.file_proc_log=self.working_dir+os.sep+baseline+"_log.txt"
-                
-                if not os.path.exists(self.file_proc_log):
-                    # remonte d'un cran le chemin
-                    parent_path = Path(self.working_dir).parent
-                    self.file_proc_log=str(parent_path)+os.sep+baseline+"_log.txt"
+                self.file_proc_log= self.get_log_file(self.file_proc)
                 
                 _,dateutc = get_time_from_log(self.file_proc_log)
                 dateobs=dateutc[0]+'T'+dateutc[1]
@@ -3320,20 +3521,10 @@ class main_wnd_UI(QMainWindow) :
         try :
             self.myinfos = infos_dlg()
             if self.ext_proc == 'png' :
-                baseline = os.path.basename(get_baseline(os.path.splitext(self.file_proc)[0]))
-                self.file_proc_log=self.working_dir+os.sep+baseline+"_log.txt"
-                
-                if not os.path.exists(self.file_proc_log):
-                    # remonte d'un cran le chemin
-                    parent_path = Path(self.working_dir).parent
-                    self.file_proc_log=str(parent_path)+os.sep+baseline+"_log.txt"
-                    
-                #self.file_proc_log = get_baseline(os.path.splitext(self.file_proc)[0]) + "_log.txt"
+                self.file_proc_log= self.get_log_file(self.file_proc)
                 self.myinfos.display_infos_log(self.file_proc_log)
             else :
-                self.myinfos.display_infos_fits(self.header_proc)
-                
-            
+                self.myinfos.display_infos_fits(self.header_proc)              
         except :
             #myinfos.ui.close()
             print(self.tr('Pas de fichier : ') + self.file_proc_log)
@@ -3353,17 +3544,50 @@ class main_wnd_UI(QMainWindow) :
                         self.ui.grid_view.view.removeItem(p)
         except :
             pass
-            
-        file_grid = QFileDialog.getOpenFileName(self, "Selectionner image ", self.working_dir, "Fichiers png (*.png);;Fichiers fits (*.fits)")
+        
+        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
+        filtres_mapping = {
+            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
+            "*_recon*.fits": self.tr("Fichiers recon fits (*_recon*.fits)"),
+            "*_free.fits":  self.tr("Fichiers free fits (*_free.fits)"),
+            "*_cont*.fits": self.tr("Fichiers cont fits (*_cont*.fits)"),
+            "*.fits":      self.tr("Fichiers fits (*.fits)"),
+            "*.png":       self.tr("Tous les fichiers png (*.png)")
+        }
+    
+        # Définition de la liste complète des filtres
+        filtres = ";;".join([
+            self.tr("Tous les fichiers png (*.png)"),
+            self.tr("Fichiers disk png (*_disk.png)"),
+            self.tr("Fichiers protus png (*_protus.png)"),
+            self.tr("Fichiers clahe png (*_clahe.png)"),
+            self.tr("Fichiers free (*_free.png)"),
+            self.tr("Fichiers recon fits (*_recon*.fits)"),
+            self.tr("Fichiers free fits (*_free.fits)"),
+            self.tr("Fichiers cont fits (*_cont*.fits)"),
+            self.tr("Fichiers fits (*.fits)")
+        ])
+    
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
+        print(self.pattern, filtre_defaut)
+        file_grid = QFileDialog.getOpenFileName(self, self.tr("Selectionner image "), self.working_dir, filtres, filtre_defaut)
         if file_grid != ('',''):
-            self.file_grid=file_grid[0]
-            self.grid_read()
-            self.file_proc=self.file_grid
-            self.proc_read()
+            try :
+                self.file_grid=file_grid[0]
+                self.grid_read()
+                self.file_proc=self.file_grid
+                self.proc_read()
+            except:
+                pass
             
     def grid_read (self):
             self.filigranes =[]
             self.grid_dist_cancel()
+            self.ui.grid_view.clear()
             self.working_dir= self.get_dirpath(self.file_grid)
             self.ui.grid_filename_lbl.setText(self.file_grid)
             # recupere extension
@@ -3388,17 +3612,10 @@ class main_wnd_UI(QMainWindow) :
                     mydate=hdr['DATE-OBS']
                     self.hdr=hdr
                 else :
-                    baseline = os.path.basename(get_baseline(os.path.splitext(self.file_grid)[0]))
-                    self.file_grid_log=self.working_dir+os.sep+baseline+"_log.txt"
-                    
-                    if not os.path.exists(self.file_grid_log):
-                        # remonte d'un cran le chemin
-                        parent_path = Path(self.working_dir).parent
-                        self.file_grid_log=str(parent_path)+os.sep+baseline+"_log.txt"
-                    #self.file_grid_log = get_baseline(os.path.splitext(self.file_grid)[0]) + "_log.txt"
+                    self.file_grid_log= self.get_log_file(self.file_grid)
                     _,dateutc = get_time_from_log(self.file_grid_log)
                     mydate=dateutc[0]+'T'+dateutc[1]
-                self.ui.grid_date_text.setText(mydate)
+                self.ui.grid_date_text.setText(mydate[:-8])
                 angP, paramB0, longL0, RotCarr = angle_P_B0(mydate)
                 #self.ui.grid_angP_text.setText(angP)
             except :
@@ -3420,7 +3637,7 @@ class main_wnd_UI(QMainWindow) :
                 color_index = self.ui.grid_color_combo.currentIndex()
                 text_color_list = [(250, 250, 0,0x80), (250, 250, 250,0x80), (250, 250, 250,0x80)]
                 text_color= text_color_list[color_index]
-                pen_color_list = [pg.mkPen(QtGui.QColor(250,250,0,0x60),width=1), pg.mkPen(QtGui.QColor(0,0,0,0x60),width=1), pg.mkPen(QtGui.QColor(250,250,250,0x60),width=1)]
+                pen_color_list = [pg.mkPen(QtGui.QColor(250,250,0,0x60),width=2), pg.mkPen(QtGui.QColor(0,0,0,0x60),width=2), pg.mkPen(QtGui.QColor(250,250,250,0x60),width=2)]
                 mypen = pen_color_list [color_index]
                 
                 if self.plotitem :
@@ -3769,8 +3986,10 @@ class main_wnd_UI(QMainWindow) :
             # create an exporter instance, as an argument give it
             # the item you wish to export
             exporter = ImageExporter(self.ui.grid_view.getImageItem())
+            image = self.ui.grid_view.image
             # set export parameters if needed
-            exporter.parameters()['height'] = 800   # (note this also affects height parameter)
+            exporter.parameters()['height'] = image.shape[0] # (note this also affects height parameter)
+            exporter.parameters()['width'] = image.shape[1]
             # save to file
             exporter.export(file_name)
     
@@ -3828,7 +4047,10 @@ class main_wnd_UI(QMainWindow) :
         km_per_pixel = rsun_km / rsun_pixels
         
         # offset si disque partiel
-        ih, iw = self.img_grid.shape
+        if len(self.img_grid.shape) == 3 :
+            ih, iw,_ = self.img_grid.shape
+        else :
+            ih, iw = self.img_grid.shape
         #x0= xc-(iw//2)
         yc0= ih-yc
 
@@ -4152,14 +4374,8 @@ class main_wnd_UI(QMainWindow) :
             if filename_short.find('sunscan')!= -1 :
                 filename_short=filename_short.replace('sunscan', '_scan')
             try :
-                baseline = os.path.basename(get_baseline(os.path.splitext(filename_short)[0]))
-                file_log=self.working_dir+os.sep+baseline+"_log.txt"
-                
-                if not os.path.exists(file_log):
-                    # remonte d'un cran le chemin
-                    parent_path = Path(self.working_dir).parent
-                    file_log=str(parent_path)+os.sep+baseline+"_log.txt"
-                
+                file_log= self.get_log_file(filename)
+                                
                 cx,cy,sr,ay1,ay2,ax1,ax2 = mo.decode_log(file_log)
                 radius= sr
             except :
@@ -4168,6 +4384,30 @@ class main_wnd_UI(QMainWindow) :
         print("radius : ", radius)
         return radius
 
+    def get_log_file (self, file_proc):
+        baseline = os.path.basename(get_baseline(os.path.splitext(file_proc)[0]))
+        file_proc_log=self.working_dir+os.sep+baseline+"_log.txt"
+        
+        if not os.path.exists(file_proc_log):
+            # remonte d'un cran le chemin
+            parent_path = Path(self.working_dir).parent
+            file_proc_log=str(parent_path)+os.sep+baseline+"_log.txt"
+            
+            # on teste a nouveau
+            if not os.path.exists(file_proc_log):
+                baseline = os.path.splitext(file_proc)[0]
+                file_proc_log=baseline+"_log.txt"
+            # on teste encore
+                if not os.path.exists(file_proc_log):
+                    # on ne remonte pas d'un cran cette fois, ce n'est pas un clahe
+                    print(self.tr("fichier log non trouvé"))
+                    file_proc_log=''
+          
+        
+        return file_proc_log
+        
+        
+        
 # ----------------------------------------------------------------------------
 # class new window to display image floating
 #-----------------------------------------------------------------------------
@@ -5224,7 +5464,7 @@ def template_locate (img_r, temp_r) :
     
     return maxLoc
 
-def get_baseline (f) :
+def get_baseline_old (f) :
     f_short=os.path.split(f)[1]
     f_path=os.path.split(f)[0]
     f_short = f_short.removeprefix('st')
@@ -5244,16 +5484,58 @@ def get_baseline (f) :
     index=-1
     if f.rfind('_dp') !=1 :
         index=f.rfind('_dp')
+        baseline= f[:index] # chemin complet
+    
     if f.rfind('_color') != -1 :
         index=f.rfind('_color')
+        baseline= f[:index] # chemin complet
+        
     if f.rfind('_doppler') != -1 :
         index =f.rfind('_doppler')
-    if index == -1 :
-        index=f.rfind("_")
+        baseline= f[:index] # chemin complet
         
-    baseline= f[:index] # chemin complet
+    if index == -1 :
+        if f.rfind("_") != -1 :
+             index = f.rfind("_")
+             baseline= f[:index] # chemin complet
+        else :
+             baseline= f
         
     return baseline
+
+def get_baseline(f) :
+    # f est le nom complet du fichier sans l'extension
+    
+    # f_short est le nom sans le chemin
+    f_short=os.path.split(f)[1]
+    # f_path est le chemin
+    f_path=os.path.split(f)[0]
+    # on comence par enlever les eventuels préfixes
+    f_short = f_short.removeprefix('st')
+    f_short = f_short.removeprefix('cr')
+    f=f_path+os.sep+f_short
+    
+    baseline = f
+    
+    suffixes = ["_disk", "_protus","_clahe", "_dp*_cont","_dp*", "_cont",
+               "_doppler*", "_free", "_raw", "_color*", "_mix", "_inv",
+               "_recon","_dp*recon"]
+    
+    for suffixe in suffixes :
+        # On transforme le motif wildcard en regex : "*" → ".*"
+        motif = re.escape(suffixe).replace("\\*", ".*") + r"$"
+        m = re.match(f"^(.*){motif}", f)
+        if m:
+            baseline =m.group(1)
+            #print("baseline "+str(baseline))
+            return baseline
+            
+    
+    return baseline
+    
+    # il faudra aussi tester si le fichier n'existe pas de garder le nom en entier
+    # si on sauve comme _color_halpha_proc...
+
 
 def get_time_from_log (fich):
     # retourne le jour julien et dateobs UTC
