@@ -44,6 +44,7 @@ jobs:
       - name: Copier le PDF et le dossier d'exemples
         run: |
           copy inti_partner_om_FR.pdf dist\inti_partner\
+          copy inti_partner_om_EN.pdf dist\inti_partner\
 
       - name: Créer le fichier ZIP
         run: |
