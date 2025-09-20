@@ -39,13 +39,12 @@ jobs:
       - name: Copier le PDF et le dossier d'exemples
         run: |
           cp inti_partner_om_FR.pdf dist/inti_partner/
+          cp inti_partner_om_EN.pdf dist/inti_partner/
 
-      - name: Créer le fichier ZIP
-        run: |
-          zip -r inti_partner-linux.zip dist/inti_partner
+
           
       - name: Upload artefact sans zip imbriqué
         uses: actions/upload-artifact@v4
         with:
           name: inti_partner-linux
-          path: inti_partner-linux.zip
+          path: dist/inti_partner/
