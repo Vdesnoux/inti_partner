@@ -47,7 +47,7 @@
          <enum>QTabWidget::TabShape::Rounded</enum>
         </property>
         <property name="currentIndex">
-         <number>6</number>
+         <number>8</number>
         </property>
         <property name="tabsClosable">
          <bool>false</bool>
@@ -1221,7 +1221,7 @@
         <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>9</number>
        </property>
        <widget class="QWidget" name="page">
         <layout class="QVBoxLayout" name="verticalLayout_38">
@@ -3129,13 +3129,6 @@
                </widget>
               </item>
              </layout>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_39">
-              <property name="text">
-               <string>Format : YYYY-MM-DDTHH:MM:SS</string>
-              </property>
-             </widget>
             </item>
            </layout>
           </widget>

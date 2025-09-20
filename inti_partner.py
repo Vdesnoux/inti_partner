@@ -104,7 +104,7 @@ Version 0.9 - sept 2025
 - trad refaite
 
 Version 1.0 - sept 25
-- fix bug map selectionline et erase lines
+- fix bug map selection line et erase lines
 
 """
 
