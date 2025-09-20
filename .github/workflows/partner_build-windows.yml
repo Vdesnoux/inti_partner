@@ -46,9 +46,6 @@ jobs:
           copy inti_partner_om_FR.pdf dist\inti_partner\
           copy inti_partner_om_EN.pdf dist\inti_partner\
 
-      - name: Créer le fichier ZIP
-        run: |
-          powershell Compress-Archive -Path dist\inti_partner\* -DestinationPath inti_partner-windows.zip
           
       - name: Upload Windows onedir build
         uses: actions/upload-artifact@v4
