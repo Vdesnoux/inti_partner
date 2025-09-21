@@ -2405,7 +2405,7 @@ class main_wnd_UI(QMainWindow) :
             nb_trame_totale=int(self.ui.anim_nb_total_text.text())
             nb_img_acquise = len(self.file_list_anim)
             try :
-                reduction= float(self.ui.anim_reduc_text.text())
+                reduction= to_float(self.ui.anim_reduc_text.text())
             except :
                 print(self.tr("facteur d'échelle : doit être une valeur numérique"))
                 reduction = 1
@@ -2600,7 +2600,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.map_img_to_find_lbl.setScaledContents(True)
         
     def map_localize(self) :
-        my_pixel_size= float(self.ui.map_pixel_size_text.text())
+        my_pixel_size= to_float(self.ui.map_pixel_size_text.text())
         pixel_ref=4.8  # la taille de pixel de l'image spectre.png de reference
         ratio_pix= my_pixel_size/pixel_ref
         
@@ -2858,12 +2858,17 @@ class main_wnd_UI(QMainWindow) :
             data_offset=178
             frame_size = Width * Height
             
+            
+            
             with open(self.file_ser, "rb") as f:
                 f.seek(data_offset)  # sauter l'entête
                 frames = np.fromfile(f, dtype=dtype, count=self.FrameCount * frame_size)
-            
+                
             if bitdepth == 8 :
-                frames = frames * 256
+                frames = (frames.astype(np.uint16) * 256)
+
+            
+            
                 
             # Reshape en (n_frames, height, width)
             self.ser_raw = frames.reshape((self.FrameCount, Height, Width))
@@ -3212,7 +3217,7 @@ class main_wnd_UI(QMainWindow) :
         # rotation
         if self.ui.proc_ang_text.text() !='' and self.ui.proc_ang_text.text() !='0' :
             try :
-                ang_rot=float(self.ui.proc_ang_text.text())
+                ang_rot=to_float(self.ui.proc_ang_text.text())
                 
                 if self.ext_proc == "png" :
                     # rotation autour du centre de l'image
@@ -3945,7 +3950,7 @@ class main_wnd_UI(QMainWindow) :
         self.img_grid=img
         
     def grid_rotate (self) :
-        angle=float(self.ui.grid_angP_text.text())
+        angle= to_float(self.ui.grid_angP_text.text())
         if self.ext_grid == 'fits' :
             centreX=self.hdr['CENTER_X']
             centreY=self.hdr['CENTER_Y']
@@ -4715,6 +4720,10 @@ class Log(object):
 # main App Qt  
 #-----------------------------------------------------------------------------  
 #-----------------------------------------------------------------------------  
+
+def to_float(s: str) -> float:
+    s= str(s)
+    return float(s.replace(',', '.'))
 
 def file_exist(name):    
    
