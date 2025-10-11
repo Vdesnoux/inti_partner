@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 import cv2
 import blend_functions as bl
 import scipy.ndimage as ndimage
+import Inti_functions as ifc
 
 
 """
@@ -112,6 +113,46 @@ def decode_log(flog):
         
     return cx,cy,sr,ay1,ay2,ax1,ax2
 
+def analyse_geom (frame) :
+    # conversion couleur noir et blanc
+    if len(frame.shape) > 2 :
+        img_nb = np.copy(frame)
+        # creer des images nb pour calculer la geometrie
+        # Normaliser selon la profondeur
+        if img_nb.dtype == np.uint8:
+            img_nb = img_nb.astype(np.float32) / 255.0
+        elif img_nb.dtype == np.uint16:
+            img_nb = img_nb.astype(np.float32) / 65535.0
+        else:
+            raise TypeError("Type d'image non supporté (uint8 ou uint16 attendu)")
+    
+        # Conversion standard vers niveaux de gris
+        gray = 0.299 * img_nb[..., 0] + 0.587 * img_nb[..., 1] + 0.114 * img_nb[..., 2]
+    
+        # Revenir sur 16 bits
+        frame = np.clip(gray * 65535, 0, 65535).astype(np.uint16)
+    try:
+        X = ifc.detect_edge (frame, zexcl=0.1, crop=True, disp_log=False)
+        EllipseFit,XE = ifc.fit_ellipse(frame, X, disp_log=False)
+        ay1,ay2 = ifc.detect_bord(frame, axis=1,offset=0, flag_disk=True)
+        ax1,ax2 = ifc.detect_bord(frame, axis=0,offset=0, flag_disk=True)
+        cx=round(EllipseFit[0][0])
+        cy=round(EllipseFit[0][1])
+        
+        wi=round(EllipseFit[1]) # diametre
+        he=round(EllipseFit[2])
+        
+        sr = wi
+        
+        #print('cercle '+str(cx)+' '+str(cy)+' '+ str(sr))
+        #print("box : ", str(ax1), str(ax2), str(ay1), str(ay2))
+        
+    except :
+        print('Erreur geom : ')
+        cx=cy=sr=ax1=ax2=ay1=ay2=0
+        
+    return cx,cy,sr,ay1,ay2,ax1,ax2
+
 def im_reduce(img):
     '''
     Apply gaussian filter and drop every other pixel
@@ -189,7 +230,7 @@ def seuil_image_force (img, Seuil_haut, Seuil_bas):
     return img_seuil
 
 
-def prepare_files(WorkDir, ImgFiles) : 
+def prepare_files(WorkDir, ImgFiles, flag_use_log) : 
 
                 
     # faire test si un seul fichier
@@ -209,6 +250,7 @@ def prepare_files(WorkDir, ImgFiles) :
         x1=[]
         x2=[]
         myimg=[]
+        myimg_nb=[]
         a=''
         # detecte extension fichier fits ou png
         base=os.path.basename(ImgFile1)
@@ -274,6 +316,28 @@ def prepare_files(WorkDir, ImgFiles) :
                     # lit fichier png
                     imm=Image.open(ImgFiles[i])
                     myimg.append(np.flip(np.array(imm),0))
+                    
+                    """
+                    if len(myimg[i].shape) > 2 :
+                        img_nb = np.copy(myimg[i])
+                        # creer des images nb pour calculer la geometrie
+                        # Normaliser selon la profondeur
+                        if img_nb.dtype == np.uint8:
+                            img_nb = img_nb.astype(np.float32) / 255.0
+                        elif img_nb.dtype == np.uint16:
+                            img_nb = img_nb.astype(np.float32) / 65535.0
+                        else:
+                            raise TypeError("Type d'image non supporté (uint8 ou uint16 attendu)")
+                    
+                        # Conversion standard vers niveaux de gris
+                        gray = 0.299 * img_nb[..., 0] + 0.587 * img_nb[..., 1] + 0.114 * img_nb[..., 2]
+                    
+                        # Revenir sur 16 bits
+                        img_nb = np.clip(gray * 65535, 0, 65535).astype(np.uint16)
+                        
+                        myimg_nb.append(img_nb)
+                    """
+                    
                     ih.append(myimg[i].shape[0])
                     iw.append(myimg[i].shape[1])
                    
@@ -288,7 +352,13 @@ def prepare_files(WorkDir, ImgFiles) :
                         parent_path = Path(WorkDir).parent
                         file_log=str(parent_path)+os.sep+baseline+"_log.txt"
                     
-                    cx,cy,sr,ay1,ay2,ax1,ax2 = decode_log(file_log)
+                    if flag_use_log :
+                        # lecture du fichier log
+                        cx,cy,sr,ay1,ay2,ax1,ax2 = decode_log(file_log)
+                        
+                    else :
+                        cx,cy,sr,ay1,ay2,ax1,ax2 = analyse_geom(myimg[i])
+                        
                     
                     if cx+cy+sr+ay1+ay2+ax1+ax2 == 0 :
                          flag_error = True

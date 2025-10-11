@@ -47,7 +47,7 @@
          <enum>QTabWidget::TabShape::Rounded</enum>
         </property>
         <property name="currentIndex">
-         <number>8</number>
+         <number>1</number>
         </property>
         <property name="tabsClosable">
          <bool>false</bool>
@@ -269,7 +269,7 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="4">
+            <item row="0" column="5">
              <widget class="QPushButton" name="select_next_btn">
               <property name="minimumSize">
                <size>
@@ -288,7 +288,7 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="5">
+            <item row="0" column="7">
              <spacer name="horizontalSpacer">
               <property name="minimumSize">
                <size>
@@ -313,7 +313,26 @@
               </property>
              </spacer>
             </item>
-            <item row="0" column="2">
+            <item row="0" column="1">
+             <widget class="QPushButton" name="select_log_btn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>90</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Log</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="3">
              <widget class="QPushButton" name="select_remove_btn">
               <property name="minimumSize">
                <size>
@@ -332,7 +351,7 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="3">
+            <item row="0" column="4">
              <widget class="QPushButton" name="select_prev_btn">
               <property name="minimumSize">
                <size>
@@ -351,8 +370,8 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="select_log_btn">
+            <item row="0" column="2">
+             <widget class="QPushButton" name="select_delete_btn">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -366,7 +385,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Log</string>
+               <string>Supprimer</string>
               </property>
              </widget>
             </item>
@@ -1221,7 +1240,7 @@
         <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="currentIndex">
-        <number>9</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="page">
         <layout class="QVBoxLayout" name="verticalLayout_38">
@@ -2135,6 +2154,13 @@
        </widget>
        <widget class="QWidget" name="mosa_panel">
         <layout class="QVBoxLayout" name="verticalLayout_8">
+         <item>
+          <widget class="QCheckBox" name="mosa_nolog_chk">
+           <property name="text">
+            <string>Pas de fichier log</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <spacer name="verticalSpacer">
            <property name="orientation">

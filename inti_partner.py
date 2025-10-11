@@ -46,6 +46,8 @@ import re
 
 import requests
 import subprocess
+from send2trash import send2trash
+
 
 # Rediriger matplotlib vers mon cache local
 local_cache = os.path.join(os.path.dirname(__file__), 'matplotlib_cache')
@@ -106,10 +108,16 @@ Version 0.9 - sept 2025
 Version 1.0 - sept 25
 - fix bug map selection line et erase lines
 
-"""
+Version 1.1 WIP
+- verif si working dir n'existe plus au lancement
+- gestion overflow sur somme dans stack
+- mosa sur fichier stacké avec detect geom sur flag "sans fichier log"
+- proc rotation si pas fichier log tente l'analyse de geom
+- proc peut appliquer clahe sur images couleurs en 16 bits
+- ajout bouton supprimer dans selector avec envoie dans corbeille
 
-# efface le rectangle rouge dans map sur nouvelle localisation
-# apres un reset, goto line ne marche plus...
+
+"""
 
 
 class main_wnd_UI(QMainWindow) :
@@ -243,6 +251,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.select_new_base_list.clicked.connect(self.select_new_base)
         self.ui.select_flip_hb_btn.clicked.connect(self.select_flip_hb)
         self.ui.select_flip_dg_btn.clicked.connect(self.select_flip_dg)
+        self.ui.select_delete_btn.clicked.connect(self.select_del_serie)
         
         # setting
         self.ui.select_image_view_ref.ui.roiBtn.hide()
@@ -499,7 +508,11 @@ class main_wnd_UI(QMainWindow) :
             self.langue='Fr'
             
         try :
-            self.working_dir=self.my_dictini['working_dir']
+            self.working_dir = self.my_dictini['working_dir']
+            # test si le repertoire existe
+            if not(os.path.exists(self.working_dir)):
+                self.working_dir = ''
+                self.my_dictini['working_dir'] =  ''      
         except:
             self.working_dir=''
     
@@ -599,7 +612,10 @@ class main_wnd_UI(QMainWindow) :
            
         
         self.working_dir=my_dictini['working_dir']
-        
+        # test si le repertoire existe
+        if not(os.path.exists(self.working_dir)):
+            self.working_dir = ''
+            my_dictini['working_dir'] =  ''        
         
         if 'stack_seuil' in my_dictini :
             self.stack_seuil=my_dictini['stack_seuil']
@@ -861,7 +877,7 @@ class main_wnd_UI(QMainWindow) :
         ext = self.get_extension(self.file_view)
         
         if ext=='png' or ext=='tiff' :
-            img_data=cv2.imread(self.file_view,cv2.IMREAD_UNCHANGED)
+            img_data=cv2.imread(str(Path(self.file_view)),cv2.IMREAD_UNCHANGED)
             if len(img_data.shape) == 3 :
                 img_data=cv2.cvtColor(img_data,cv2.COLOR_BGR2RGB)   
         
@@ -1228,21 +1244,42 @@ class main_wnd_UI(QMainWindow) :
         self.ui.stack_progress_bar.setVisible(True)
         
         if self.ui.stack_noalign_checkbox.isChecked() :
-            if self.ext_stack == 'png' :
-                sum_image = cv2.imread(fileref,cv2.IMREAD_UNCHANGED) # on récupère de format des images et on sauvegarde la première
-            if self.ext_stack== 'fits':
-                sum_image, hdr = self.read_fits_image(fileref)
-            sum_image = sum_image.astype(np.uint32)  # conversion en 32 bits
+            #if self.ext_stack == 'png' :
+            #    sum_image = cv2.imread(fileref,cv2.IMREAD_UNCHANGED) # on récupère de format des images et on sauvegarde la première
+            ##if self.ext_stack== 'fits':
+            #    sum_image, hdr = self.read_fits_image(fileref)
+            #sum_image = sum_image.astype(np.float64)  # conversion en 32 bits
+            sum_image = None
              
-            for i in range(1, len(self.file_list)) :
+            for i in range(0, len(self.file_list)) :
                 self.ui.stack_progress_bar.setValue(i)
                 
                 if self.ext_stack == 'png' :
-                    im=cv2.imread(self.file_list[i], cv2.IMREAD_UNCHANGED) 
-                if self.ext_stack== 'fits':
+                    im=cv2.imread(str(Path(self.file_list[i])), cv2.IMREAD_UNCHANGED) 
+                elif self.ext_stack== 'fits':
                     im, hdr = self.read_fits_image(self.file_list[i])
+                else:
+                    raise ValueError("Format non supporté")
                 
-                sum_image=sum_image+im
+                #sum_image=sum_image+im
+                
+                # Première image → initialise la somme
+                if sum_image is None:
+                    sum_image = im.astype(np.float64)
+                    continue
+
+                # Ajout
+                sum_image += im
+            
+                # Détection de dépassement
+                if np.issubdtype(im.dtype, np.integer):
+                    maxval = np.iinfo(im.dtype).max
+                else:
+                    maxval = np.finfo(im.dtype).max
+            
+                # Si un dépassement est détecté, on fait la moyenne cumulée
+                if np.any(sum_image > maxval):
+                    sum_image /= (i + 1)  # moyenne courante
             
             sum_image_second=sum_image
             
@@ -1250,7 +1287,7 @@ class main_wnd_UI(QMainWindow) :
             if self.ext_stack=='png' :
                 print("start dedistord...", flush=True)
                 # Initialisation du stacking
-                sum_image = cv2.imread(fileref,cv2.IMREAD_UNCHANGED) # on récupère de format des images et on sauvegarde la première
+                sum_image = cv2.imread(str(Path(fileref)),cv2.IMREAD_UNCHANGED) # on récupère de format des images et on sauvegarde la première
                 sum_image = sum_image.astype(np.uint32)  # conversion en 32 bits           
                 
                 seq_abort=False
@@ -1279,7 +1316,7 @@ class main_wnd_UI(QMainWindow) :
                             #print(dir_second+os.sep+second_file_found[0])
                     if not seq_error :
                         # Initialisation du stacking
-                        sum_image_second = cv2.imread(second_file_list[0],cv2.IMREAD_UNCHANGED) # on récupère de format des images et on sauvegarde la première
+                        sum_image_second = cv2.imread(str(Path(second_file_list[0])),cv2.IMREAD_UNCHANGED) # on récupère de format des images et on sauvegarde la première
                         sum_image_second = sum_image_second.astype(np.uint32)  # conversion en 32 bits
                     else :
                         second_file_list =self.file_list
@@ -1558,7 +1595,7 @@ class main_wnd_UI(QMainWindow) :
                 logfile.writelines(mylog)
         
     def display_stack_image_png(self, file_name) :
-        image_data= cv2.imread(file_name,cv2.IMREAD_UNCHANGED)
+        image_data= cv2.imread(str(Path(file_name)),cv2.IMREAD_UNCHANGED)
         rotated_data = np.fliplr(np.rot90(image_data, 3))
         self.ui.stack_image_view.setImage(rotated_data,autoRange=False, autoLevels=True)
         
@@ -1640,6 +1677,12 @@ class main_wnd_UI(QMainWindow) :
             clahe = cv2.createCLAHE(clipLimit=clip, tileGridSize=tile) # cliplimit was 0.8
             image = clahe.apply(image)
         else :
+            # test si 8 ou 16 bits par plan
+            if image.dtype == np.uint16:
+                # Conversion vers 8 bits pour CLAHE
+                image = (image / 256).astype(np.uint8)
+            else:
+                image = image
             # Conversion en espace LAB (Luminance + Chrominance)
             lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
             # Séparation des canaux
@@ -1664,7 +1707,7 @@ class main_wnd_UI(QMainWindow) :
             ext = self.get_extension (myfile)
             var=0
             if ext == 'png' or ext=='jpg' :
-                img = cv2.imread(myfile,cv2.IMREAD_UNCHANGED)
+                img = cv2.imread(str(Path(myfile)),cv2.IMREAD_UNCHANGED)
     
             if ext=='fits' :
                 img, hdr = self.read_fits_image(myfile)
@@ -1735,35 +1778,37 @@ class main_wnd_UI(QMainWindow) :
         # affiche les deux premières images de la liste
         self.display_select_image_png(self.select_files[0], viewport=0)
         self.ref_index=0
-        self.display_select_image_png(self.select_files[1], viewport=1)
-        self.current_index = 1
-        self.ui.select_list_files.setCurrentRow(self.current_index)
-        self.ui.select_list_files.item(1).setSelected(True)
-        #print('current index : ', self.ui.select_list_files.currentRow())
-        
-        
-        # lie les deux vues
-        self.ui.select_image_view_ref.view.setXLink(self.ui.select_image_view.view)
-        self.ui.select_image_view_ref.view.setYLink(self.ui.select_image_view.view)
-        self.ui.select_image_view.view.setXLink(self.ui.select_image_view_ref.view)
-        self.ui.select_image_view.view.setYLink(self.ui.select_image_view_ref.view)
-        
-        
-        # calcul list des iqm
-        for f in self.select_files :
-            iqm=self.img_variance(self.working_dir+os.sep+f)
-            self.iqm_list.append([str(iqm), f])
-        
-        self.ui.select_filesel_lbl.setText(self.select_files[1]+' '+self.iqm_list[1][0])
-        self.ui.select_file_lbl.setText(self.select_files[0]+' '+self.iqm_list[0][0])
-        
-        # se place en viewall mais il faut attendre que l'image se charge dans cycle Qt
-        QTimer.singleShot(50, lambda: self.ui.select_image_view_ref.getView().autoRange())
+        if len(self.select_files) > 1 :
+            
+            self.display_select_image_png(self.select_files[1], viewport=1)
+            self.current_index = 1
+            self.ui.select_list_files.setCurrentRow(self.current_index)
+            self.ui.select_list_files.item(1).setSelected(True)
+            #print('current index : ', self.ui.select_list_files.currentRow())
+            
+            
+            # lie les deux vues
+            self.ui.select_image_view_ref.view.setXLink(self.ui.select_image_view.view)
+            self.ui.select_image_view_ref.view.setYLink(self.ui.select_image_view.view)
+            self.ui.select_image_view.view.setXLink(self.ui.select_image_view_ref.view)
+            self.ui.select_image_view.view.setYLink(self.ui.select_image_view_ref.view)
+            
+            
+            # calcul list des iqm
+            for f in self.select_files :
+                iqm=self.img_variance(self.working_dir+os.sep+f)
+                self.iqm_list.append([str(iqm), f])
+            
+            self.ui.select_filesel_lbl.setText(self.select_files[1]+' '+self.iqm_list[1][0])
+            self.ui.select_file_lbl.setText(self.select_files[0]+' '+self.iqm_list[0][0])
+            
+            # se place en viewall mais il faut attendre que l'image se charge dans cycle Qt
+            QTimer.singleShot(50, lambda: self.ui.select_image_view_ref.getView().autoRange())
 
             
     def display_select_image_png(self, file_sh_name, viewport) :
         file_name=self.working_dir+os.sep+file_sh_name
-        image_data= cv2.imread(file_name,cv2.IMREAD_UNCHANGED)
+        image_data= cv2.imread(str(Path(file_name)),cv2.IMREAD_UNCHANGED)
         rotated_data = np.fliplr(np.rot90(image_data, 3))
         if viewport==0 :
             self.ui.select_image_view_ref.setImage(rotated_data,autoRange=False, autoLevels=True)
@@ -1836,6 +1881,56 @@ class main_wnd_UI(QMainWindow) :
         self.display_select_image_png(self.select_files[index], viewport=1)
         #print("click : ", self.select_files[index])
         self.ui.select_filesel_lbl.setText(self.select_files[index]+' '+self.iqm_list[index][0])
+        
+    def select_del_serie(self) :
+        index=self.current_index
+        print(self.working_dir+os.sep+self.select_files[index])
+        
+        ref_path = Path(self.working_dir+os.sep+self.select_files[index])
+        directory = ref_path.parent
+        ref_stem = ref_path.stem
+        racine = get_baseline (self.working_dir+os.sep+ref_stem)
+        racine= os.path.split(racine)[1]
+       
+
+        match_files = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
+        match_files_clahe =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Clahe').iterdir() if f.is_file() and f.stem.startswith(racine)]
+        match_files_comp =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Complements').iterdir() if f.is_file() and f.stem.startswith(racine)]
+        
+        # fichier d'acquisition ser et Cie
+        #racine_acq = racine[1:]
+        #match_files_acq = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine_acq)]
+        #print("racine : "+ racine)
+        
+        
+        msg = QMessageBox()
+        msg.setWindowTitle("Fichiers à supprimer")
+        msg.setText("fichiers trouvés :\n" + "\n".join(match_files)
+                    +"\n Clahe :\n"+ "\n".join(match_files_clahe)+"\n complements :\n"+ "\n".join(match_files_comp))
+        btn_confirm = msg.addButton("Confirmer", QMessageBox.AcceptRole) 
+        btn_cancel  = msg.addButton("Annuler",  QMessageBox.RejectRole)
+        msg.exec()
+        
+        clicked = msg.clickedButton()
+        if clicked == btn_confirm:
+            print (self.tr("Fichiers envoyés à la corbeille : "))
+            for f in match_files:
+                ff= Path(self.working_dir) / f 
+                send2trash(ff)
+                print(f)
+            for f in match_files_clahe :
+                ff= Path(self.working_dir) / Path('Clahe') / f
+                send2trash(ff)
+                print(f)
+            for f in match_files_comp :
+                ff= Path(self.working_dir) / Path('Complements') / f
+                send2trash(ff)
+                print(f)
+        elif clicked == btn_cancel:
+            print("Opération annulée")
+        
+        # et on le supprime de la liste
+        self.select_remove_clicked()
         
     def sort_files_IQ (self):
         # tableau facteur de qualité,fichier et liste fichier classés
@@ -2032,7 +2127,7 @@ class main_wnd_UI(QMainWindow) :
             self.ui.mosa_image_view.ui.histogram.show()
     
     def display_mosa_image_png(self, file_name) :
-        image_data= cv2.imread(file_name,cv2.IMREAD_UNCHANGED)
+        image_data= cv2.imread(str(Path(file_name)),cv2.IMREAD_UNCHANGED)
         if len(image_data.shape) == 3 :
             image_data=cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
         rotated_data = np.fliplr(np.rot90(image_data, 3))
@@ -2045,7 +2140,8 @@ class main_wnd_UI(QMainWindow) :
         
     def run_mosa_clicked (self):
         ext = self.get_extension (self.file_list_mosa[0])
-        myimg, iw, ih, centerX, centerY, solarR, x1, x2, y1, y2, flag_error= mo.prepare_files(self.working_dir, self.file_list_mosa)
+        flag_use_log = not(self.ui.mosa_nolog_chk.isChecked())
+        myimg, iw, ih, centerX, centerY, solarR, x1, x2, y1, y2, flag_error= mo.prepare_files(self.working_dir, self.file_list_mosa, flag_use_log)
         if flag_error == True :
             print(self.tr("Erreur lecture géométrie"))
         else :
@@ -2186,7 +2282,7 @@ class main_wnd_UI(QMainWindow) :
         
         
     def display_anim_image_png(self, file_name) :
-        image_data= cv2.imread(file_name,cv2.IMREAD_UNCHANGED)
+        image_data= cv2.imread(str(Path(file_name)),cv2.IMREAD_UNCHANGED)
         rotated_data = np.fliplr(np.rot90(image_data, 3))
         self.ui.anim_image_view.setImage(rotated_data,autoRange=False, autoLevels=True)
         
@@ -2309,7 +2405,7 @@ class main_wnd_UI(QMainWindow) :
         
     def anim_time_sample_validate(self) :
         self.ui.anim_stacked_widget.setCurrentIndex(0)
-        img= cv2.imread(self.file_list_anim[0],cv2.IMREAD_UNCHANGED)
+        img= cv2.imread(str(Path(self.file_list_anim[0])),cv2.IMREAD_UNCHANGED)
         h=img.shape[0]
         w=img.shape[1]
         self.ui.anim_ih_lbl.setText(str(h))
@@ -2534,7 +2630,7 @@ class main_wnd_UI(QMainWindow) :
                     for k in range(0,len(frame) ):
                         
                         fname=frame[k]
-                        img=cv2.imread(self.anim_dir+os.sep+fname)
+                        img=cv2.imread(str(Path(self.anim_dir))+os.sep+fname)
                         img2=cv2.resize(img,(width, height),interpolation = cv2.INTER_AREA)
                         self.gif_images.append(Image.fromarray(img2))
                         out.write(img2)
@@ -2607,7 +2703,7 @@ class main_wnd_UI(QMainWindow) :
         img_r=cv2.imread(resource_path('sun_spectre.png'), cv2.IMREAD_GRAYSCALE)
         ih,iw = img_r.shape[0], img_r.shape[1]
         
-        template=cv2.imread(self.file_map, cv2.IMREAD_GRAYSCALE)
+        template=cv2.imread(str(Path(self.file_map)), cv2.IMREAD_GRAYSCALE)
         if self.ui.map_flipud_checkbox.isChecked() :
             template=np.flipud(template)
         temp_r= synth_spectrum(template, ratio_pix)
@@ -2804,7 +2900,7 @@ class main_wnd_UI(QMainWindow) :
     def mag_results_list_sel_changed (self) :
         index = self.ui.mag_results_list.currentRow()
         if index !=-1 :
-            img_data = cv2.imread(self.file_results[index], cv2.IMREAD_ANYDEPTH)
+            img_data = cv2.imread(str(Path(self.file_results[index])), cv2.IMREAD_ANYDEPTH)
             rotated_data = np.fliplr(np.rot90(img_data, 3))
             self.ui.mag_img_view.setImage(rotated_data,autoRange=False, autoLevels=True)
             
@@ -2854,25 +2950,37 @@ class main_wnd_UI(QMainWindow) :
             self.ser_hdr = scan.getHeader()
             #print(self.ser_hdr)
             
+            if Width < Height : # trames verticales
+                flag_rot= True
+            else :
+                flag_rot=False
+            
             # Charger toutes les trames dans un tableau NumPy en RAM
             data_offset=178
-            frame_size = Width * Height
+            frame_size = int(Width * Height)
             
             
             
             with open(self.file_ser, "rb") as f:
                 f.seek(data_offset)  # sauter l'entête
-                frames = np.fromfile(f, dtype=dtype, count=self.FrameCount * frame_size)
+                cbytes = int(self.FrameCount) * frame_size
+                frames = np.fromfile(f, dtype=dtype, count=cbytes)
                 
             if bitdepth == 8 :
                 frames = (frames.astype(np.uint16) * 256)
 
             
-            
+            if Width < Height :
+                flag_rot = True
+            else :
+                flag_rot = False
                 
             # Reshape en (n_frames, height, width)
             self.ser_raw = frames.reshape((self.FrameCount, Height, Width))
-            ser_volume = np.flip(self.ser_raw.swapaxes(1, 2), axis=1)
+            if flag_rot == False :
+                ser_volume = np.flip(self.ser_raw.swapaxes(1, 2), axis=1)
+            else :
+                ser_volume = self.ser_raw
             
             self.ui.ser_view.setImage(ser_volume)
             mid_pos= self.ui.ser_view.image.shape[1]//2
@@ -2892,7 +3000,7 @@ class main_wnd_UI(QMainWindow) :
             
             file_raw=self.working_dir+os.sep+'Complements'+os.sep+basefich+'_raw.png'
             if file_exist(file_raw) :
-                img_raw=cv2.imread(file_raw,cv2.IMREAD_UNCHANGED)
+                img_raw=cv2.imread(str(Path(file_raw)),cv2.IMREAD_UNCHANGED)
                 img_raw = np.fliplr(np.rot90(img_raw, 3))
                 # affiche fichier raw
                 self.ui.ser_raw_view.setImage(img_raw)
@@ -2900,7 +3008,7 @@ class main_wnd_UI(QMainWindow) :
             else :
                 file_raw=self.working_dir+os.sep+os.sep+basefich+'_raw.png'
                 if file_exist(file_raw) :
-                    img_raw=cv2.imread(file_raw,cv2.IMREAD_UNCHANGED)
+                    img_raw=cv2.imread(str(Path(file_raw)),cv2.IMREAD_UNCHANGED)
                     img_raw = np.fliplr(np.rot90(img_raw, 3))
                     # affiche fichier raw
                     self.ui.ser_raw_view.setImage(img_raw)
@@ -3161,7 +3269,7 @@ class main_wnd_UI(QMainWindow) :
             # lecture est fonction de l'extension
             if self.ext_proc == 'png' or self.ext_proc == 'tiff':
                 # si png
-                img_proc=cv2.imread(self.file_proc,cv2.IMREAD_UNCHANGED)
+                img_proc=cv2.imread(str(Path(self.file_proc)),cv2.IMREAD_UNCHANGED)
                 if len(img_proc.shape) == 3 :
                     img_proc=cv2.cvtColor(img_proc,cv2.COLOR_BGR2RGB)
             if self.ext_proc== 'fits' :
@@ -3179,9 +3287,14 @@ class main_wnd_UI(QMainWindow) :
         
     
     def proc_apply (self) :
-        # on part de l'image d'origine à chque fois
+        # on part de l'image d'origine à chaque fois
         img=np.copy(self.original_data)
         img_proc=np.copy(img)
+        
+        if len(img_proc.shape) > 2 :
+            flag_img_color = True
+        else :
+            flag_img_color = False
         
         # clahe
         if not self.ui.proc_clahenone_radio.isChecked() :
@@ -3192,6 +3305,7 @@ class main_wnd_UI(QMainWindow) :
                     self.clahe_level=2 
                 else :
                     self.clahe_level=3 
+
             img_proc=self.claheImage(img, self.clahe_level)
         #else :
             #img_proc=np.copy(self.original_data)
@@ -3210,22 +3324,27 @@ class main_wnd_UI(QMainWindow) :
             #img_proc=np.copy(self.original_data)
         
         # couleur
-        couleur=self.ui.proc_color_combo.currentText()
-        if ( couleur !='Aucune' and couleur !='None') :
-            img_proc=Colorise_Image(couleur, img_proc)
+        if not flag_img_color :
+            couleur=self.ui.proc_color_combo.currentText()
+            if ( couleur !='Aucune' and couleur !='None') :
+                img_proc=Colorise_Image(couleur, img_proc)
         
         # rotation
         if self.ui.proc_ang_text.text() !='' and self.ui.proc_ang_text.text() !='0' :
             try :
-                ang_rot=to_float(self.ui.proc_ang_text.text())
+                ang_rot=-to_float(self.ui.proc_ang_text.text())
                 
                 if self.ext_proc == "png" :
                     # rotation autour du centre de l'image
                     
                     try :
-                        self.file_proc_log= self.get_log_file(self.file_proc)                          
+                        self.file_proc_log= self.get_log_file(self.file_proc)
+                        if self.file_proc_log != '' :
+                            cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_proc_log)
+                        else :
+                            print(self.tr("Pas de fichier log... analyse image"))
+                            cx,cy,sr,ay1,ay2,ax1,ax2 = mo.analyse_geom(img_proc)
                         
-                        cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_proc_log)
                         diam=int(int(sr)*2)
                         cx = img_proc.shape[1]//2 
                         cy = img_proc.shape[0]//2
@@ -3274,7 +3393,7 @@ class main_wnd_UI(QMainWindow) :
         else :
             img_weak=np.array((img), dtype='uint16')
         
-        R = int(self.get_radius(self.file_proc))
+        R = int(self.get_radius(self.file_proc, img))
         height, width = img.shape
         center = (width//2, height//2) # TODO lire les valeurs dans log ou entete fits
         
@@ -3578,7 +3697,7 @@ class main_wnd_UI(QMainWindow) :
     
         # Choix du filtre par défaut
         filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
-        print(self.pattern, filtre_defaut)
+        #print(self.pattern, filtre_defaut)
         file_grid = QFileDialog.getOpenFileName(self, self.tr("Selectionner image "), self.working_dir, filtres, filtre_defaut)
         if file_grid != ('',''):
             try :
@@ -3600,7 +3719,7 @@ class main_wnd_UI(QMainWindow) :
             # lecture est fonction de l'extension
             if self.ext_grid == 'png' or self.ext_grid == 'tiff':
                 # si png noir et blanc
-                img_grid=cv2.imread(self.file_grid,cv2.IMREAD_UNCHANGED)
+                img_grid=cv2.imread(str(Path(self.file_grid)),cv2.IMREAD_UNCHANGED)
                 if len(img_grid.shape) == 3 :
                     img_grid=cv2.cvtColor(img_grid, cv2.COLOR_BGR2RGB)
             
@@ -3900,7 +4019,7 @@ class main_wnd_UI(QMainWindow) :
             if os.path.exists(filename):
                 #web.open(filename)
                 #pixmap2 = QtGui.QPixmap(filename)
-                img_disk=cv2.imread(filename,cv2.IMREAD_UNCHANGED)
+                img_disk=cv2.imread(str(Path(filename)),cv2.IMREAD_UNCHANGED)
                 ih, iw = img_disk.shape
                 if ih != iw :
                     # a priori image toujours plus large que haute...
@@ -4034,7 +4153,12 @@ class main_wnd_UI(QMainWindow) :
                 yc = self.hdr['CENTER_Y']
                 rsun_pixels = self.hdr['SOLAR_R']
             else :
-                cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
+                if self.file_grid_log !='' :
+                    cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
+                else :
+                    print(self.tr("Pas de fichier log... analyse image"))
+                    cx,cy,sr,ay1,ay2,ax1,ax2 = mo.analyse_geom(self.img_grid)
+                
                 xc=int(cx)
                 yc=int(cy)
                 rsun_pixels = int(sr)
@@ -4365,7 +4489,7 @@ class main_wnd_UI(QMainWindow) :
         ext = file_name[pos+1:]
         return ext
     
-    def get_radius(self,filename) :
+    def get_radius(self,filename, img) :
         ext=self.get_extension(filename)
         if ext=="fits" :
             img,hdr=self.read_fits_image(filename)
@@ -4380,8 +4504,12 @@ class main_wnd_UI(QMainWindow) :
                 filename_short=filename_short.replace('sunscan', '_scan')
             try :
                 file_log= self.get_log_file(filename)
-                                
-                cx,cy,sr,ay1,ay2,ax1,ax2 = mo.decode_log(file_log)
+                if file_log != '' :
+                    cx,cy,sr,ay1,ay2,ax1,ax2 = mo.decode_log(file_log)
+                else :
+                    print(self.tr("Pas de fichier log... analyse image"))
+                    cx,cy,sr,ay1,ay2,ax1,ax2 = mo.analyse_geom(img)
+                
                 radius= sr
             except :
                 print("Erreur _log.txt")
@@ -4720,6 +4848,30 @@ class Log(object):
 # main App Qt  
 #-----------------------------------------------------------------------------  
 #-----------------------------------------------------------------------------  
+
+def safe_sum(images):
+    # images est une liste de np.ndarray de même taille et type
+    stacked = np.stack(images)
+    dtype = stacked.dtype
+
+    # somme sur l'axe 0
+    summed = stacked.sum(axis=0, dtype=np.float64)
+
+    # valeur max autorisée selon le type
+    if np.issubdtype(dtype, np.integer):
+        maxval = np.iinfo(dtype).max
+    else:
+        maxval = np.finfo(dtype).max
+
+    # si dépassement détecté, on fait la moyenne
+    if np.any(summed > maxval):
+        result = stacked.mean(axis=0)
+    else:
+        result = summed
+
+    return result.astype(dtype)
+
+
 
 def to_float(s: str) -> float:
     s= str(s)
@@ -5512,6 +5664,37 @@ def get_baseline_old (f) :
         
     return baseline
 
+
+def get_racine (a: str, b: str) -> str:
+    """Retourne le préfixe commun le plus long entre deux chaînes."""
+    prefix = []
+    for x, y in zip(a, b):
+        if x == y:
+            prefix.append(x)
+        else:
+            break
+    return ''.join(prefix)
+    
+
+def get_racine2 (file_list):
+    # obtiens la chaine commune d'une liste de noms de fichiers
+    
+    # enleve les extensions et passe tout en minuscule
+    file_list = [os.path.splitext(f)[0].lower() for f in file_list]
+    file_list = [s.lower() for s in file_list]
+    
+    # recherche de la sous_chaine commune la plus longue
+    ref = file_list[0]
+    n = len(ref)
+    racine = ""
+    for i in range(n):
+        for j in range(i + 1, n + 1):
+            sous = ref[i:j]
+            if all(sous in s for s in file_list[1:]) and len(sous) > len(racine):
+                racine = sous
+    
+    return racine
+
 def get_baseline(f) :
     # f est le nom complet du fichier sans l'extension
     
@@ -5577,7 +5760,8 @@ def get_time_from_log (fich):
         
 
     except:
-        print('Erreur fichier : ', fich)
+        if fich != '' :
+            print('Erreur fichier : ', fich)
         serial_datetime = 0
     
     return serial_datetime, sc
@@ -5616,7 +5800,8 @@ def get_geom_from_log (flog) :
             else :
                 ax1=ax2=ay1=ay2=0
     except :
-        print('Erreur fichier : ', flog)
+        if flog != 0 :
+            print('Erreur fichier : ', flog)
         cx=cy=sr=ax1=ax2=ay1=ay2=0
         
     return cx,cy,sr,ay1,ay2,ax1,ax2

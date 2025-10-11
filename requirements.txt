@@ -9,4 +9,5 @@ pillow
 matplotlib
 scipy
 scikit-image
+send2trash
 
