@@ -110,14 +110,18 @@ Version 1.0 - sept 25
 
 Version 1.1 WIP
 - verif si working dir n'existe plus au lancement
-- gestion overflow sur somme dans stack
+- gestion overflow sur somme dans stack et fix bug
 - mosa sur fichier stacké avec detect geom sur flag "sans fichier log"
 - proc rotation si pas fichier log tente l'analyse de geom
 - proc peut appliquer clahe sur images couleurs en 16 bits
 - ajout bouton supprimer dans selector avec envoie dans corbeille
-
+- gestion supprime depuis selector si fichier dans clahe ou complements
+- trad anglaise de supprimer dans selector
 
 """
+
+
+
 
 
 class main_wnd_UI(QMainWindow) :
@@ -126,7 +130,7 @@ class main_wnd_UI(QMainWindow) :
         #super().__init__(parent)
         super(main_wnd_UI, self).__init__()
         
-        self.version ="1.0"
+        self.version ="1.1"
         
         #fichier GUI par Qt Designer
         loader = QUiLoader()
@@ -1271,15 +1275,12 @@ class main_wnd_UI(QMainWindow) :
                 # Ajout
                 sum_image += im
             
-                # Détection de dépassement
-                if np.issubdtype(im.dtype, np.integer):
-                    maxval = np.iinfo(im.dtype).max
-                else:
-                    maxval = np.finfo(im.dtype).max
-            
-                # Si un dépassement est détecté, on fait la moyenne cumulée
-                if np.any(sum_image > maxval):
-                    sum_image /= (i + 1)  # moyenne courante
+            # Détection de dépassement
+            maxval = np.iinfo(np.uint16).max
+        
+            # Si un dépassement est détecté, on fait la moyenne cumulée
+            if np.any(sum_image > maxval):
+                sum_image /= (i + 1)  # moyenne courante
             
             sum_image_second=sum_image
             
@@ -1891,11 +1892,31 @@ class main_wnd_UI(QMainWindow) :
         ref_stem = ref_path.stem
         racine = get_baseline (self.working_dir+os.sep+ref_stem)
         racine= os.path.split(racine)[1]
+        
+        if os.path.basename(self.working_dir.rstrip("/\\")) == "Clahe":
+            # cas répertoire de base est le sous-repertoire clahe
+            rep_parent =os.path.dirname(self.working_dir)
+            match_files_clahe = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files =  [os.path.split(f)[1] for f in Path(rep_parent).iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files_comp =  [os.path.split(f)[1] for f in Path(rep_parent+os.sep+'Complements').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            working_dir= rep_parent
+        
+        elif os.path.basename(self.working_dir.rstrip("/\\")) == "Complements": 
+            # cas répertoire Complements
+            rep_parent =os.path.dirname(self.working_dir)
+            match_files_comp = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files =  [os.path.split(f)[1] for f in Path(rep_parent).iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files_clahe =  [os.path.split(f)[1] for f in Path(rep_parent+os.sep+'Clahe').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            working_dir= rep_parent
+        else :
        
-
-        match_files = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
-        match_files_clahe =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Clahe').iterdir() if f.is_file() and f.stem.startswith(racine)]
-        match_files_comp =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Complements').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            # cas répertoire de travail
+            match_files = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files_clahe =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Clahe').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files_comp =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Complements').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            working_dir = self.working_dir
+        
+        
         
         # fichier d'acquisition ser et Cie
         #racine_acq = racine[1:]
@@ -1915,15 +1936,15 @@ class main_wnd_UI(QMainWindow) :
         if clicked == btn_confirm:
             print (self.tr("Fichiers envoyés à la corbeille : "))
             for f in match_files:
-                ff= Path(self.working_dir) / f 
+                ff= Path(working_dir) / f 
                 send2trash(ff)
                 print(f)
             for f in match_files_clahe :
-                ff= Path(self.working_dir) / Path('Clahe') / f
+                ff= Path(working_dir) / Path('Clahe') / f
                 send2trash(ff)
                 print(f)
             for f in match_files_comp :
-                ff= Path(self.working_dir) / Path('Complements') / f
+                ff= Path(working_dir) / Path('Complements') / f
                 send2trash(ff)
                 print(f)
         elif clicked == btn_cancel:

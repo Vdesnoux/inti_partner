@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 #import time
 import sys
-from scipy.ndimage import gaussian_filter1d, zoom
+from scipy.ndimage import gaussian_filter1d, zoom, median_filter
 from scipy.optimize import curve_fit
 #from scipy.signal import savgol_filter
 import ellipse as el
@@ -210,6 +210,7 @@ def detect_bord (img, axis, offset, flag_disk):
             ymean=np.mean(img_c,1)
             
         else :
+            img_c=median_filter(5,1) # > 7.0.3 pour eviter accroche ligne sombre
             ymean=np.mean(img_c,1) 
         
         if debug:
