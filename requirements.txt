@@ -11,4 +11,5 @@ scipy
 scikit-image
 send2trash
 lsq-ellipse==2.0.1
+send2trash
 
