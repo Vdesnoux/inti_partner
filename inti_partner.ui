@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>872</width>
-    <height>693</height>
+    <height>736</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -47,7 +47,7 @@
          <enum>QTabWidget::TabShape::Rounded</enum>
         </property>
         <property name="currentIndex">
-         <number>1</number>
+         <number>10</number>
         </property>
         <property name="tabsClosable">
          <bool>false</bool>
@@ -1169,6 +1169,77 @@
           </item>
          </layout>
         </widget>
+        <widget class="QWidget" name="tab_syno">
+         <attribute name="title">
+          <string>Synoptic</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_36">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_56">
+            <item>
+             <widget class="QPushButton" name="syno_img_open">
+              <property name="maximumSize">
+               <size>
+                <width>75</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Ouvrir</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="syno_dir_lbl">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QListWidget" name="syno_img_list_view">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>130</height>
+             </size>
+            </property>
+            <property name="tabKeyNavigation">
+             <bool>true</bool>
+            </property>
+            <property name="showDropIndicator" stdset="0">
+             <bool>false</bool>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>300</width>
+              <height>200</height>
+             </size>
+            </property>
+            <property name="resizeMode">
+             <enum>QListView::ResizeMode::Adjust</enum>
+            </property>
+            <property name="viewMode">
+             <enum>QListView::ViewMode::IconMode</enum>
+            </property>
+            <property name="selectionRectVisible">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="PlotWidget" name="syno_plot_view"/>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
      </layout>
@@ -1190,7 +1261,7 @@
    <property name="minimumSize">
     <size>
      <width>218</width>
-     <height>566</height>
+     <height>609</height>
     </size>
    </property>
    <property name="maximumSize">
@@ -1236,11 +1307,14 @@
          <height>16777215</height>
         </size>
        </property>
+       <property name="inputMethodHints">
+        <set>Qt::InputMethodHint::ImhPreferNumbers</set>
+       </property>
        <property name="frameShape">
         <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>10</number>
        </property>
        <widget class="QWidget" name="page">
         <layout class="QVBoxLayout" name="verticalLayout_38">
@@ -3118,7 +3192,7 @@
         </layout>
        </widget>
        <widget class="QWidget" name="grid_panel">
-        <layout class="QVBoxLayout" name="verticalLayout_31">
+        <layout class="QVBoxLayout" name="verticalLayout_34">
          <item>
           <widget class="QLabel" name="label_44">
            <property name="text">
@@ -3174,7 +3248,7 @@
            <property name="frameShadow">
             <enum>QFrame::Shadow::Raised</enum>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_34">
+           <layout class="QVBoxLayout" name="verticalLayout_31">
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_19">
               <item>
@@ -3206,14 +3280,28 @@
              </layout>
             </item>
             <item>
-             <widget class="QCheckBox" name="grid_label_checkbox">
-              <property name="text">
-               <string>Labels</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
+             <layout class="QHBoxLayout" name="horizontalLayout_46">
+              <item>
+               <widget class="QCheckBox" name="grid_label_checkbox">
+                <property name="text">
+                 <string>Labels</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="grid_ar_checkbox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string>Active Regions</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item>
              <widget class="QCheckBox" name="grid_Pdone_checkbox">
@@ -3227,6 +3315,12 @@
          </item>
          <item>
           <widget class="QPushButton" name="grid_on_btn">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>30</height>
+            </size>
+           </property>
            <property name="text">
             <string>Grille</string>
            </property>
@@ -3431,6 +3525,704 @@ li.checked::marker { content: &quot;\2612&quot;; }
          </item>
         </layout>
        </widget>
+       <widget class="QWidget" name="page_2">
+        <layout class="QVBoxLayout" name="verticalLayout_42">
+         <item>
+          <widget class="QFrame" name="frame_8">
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+           <property name="styleSheet">
+            <string notr="true"/>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Shape::StyledPanel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Shadow::Raised</enum>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_40">
+            <item>
+             <widget class="QLabel" name="label_54">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Carte</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_59">
+              <item>
+               <widget class="QLabel" name="label_53">
+                <property name="text">
+                 <string>L° origine = </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="syno_L0_txt">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>0</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_22">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_48">
+              <item>
+               <widget class="QCheckBox" name="syno_grid_carte_chk">
+                <property name="text">
+                 <string>Grille</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="syno_color_carte_combo">
+                <item>
+                 <property name="text">
+                  <string>Blanc</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Noir</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Jaune</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Bleu</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Vert</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Rouge</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Cyan</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Violet</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Orange</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_21">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="syno_getAR_btn">
+                <property name="autoFillBackground">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>AR</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="syno_ok_carte_btn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="autoFillBackground">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>  Carte Synoptique</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="Line" name="line_4">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QFrame" name="frame_9">
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Shape::StyledPanel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Shadow::Sunken</enum>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_41">
+            <item>
+             <widget class="QLabel" name="label_39">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Séquence temps-longitude</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_49">
+              <item>
+               <widget class="QLabel" name="label_59">
+                <property name="text">
+                 <string>L° Region =</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="syno_Lregion_txt">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="inputMethodHints">
+                 <set>Qt::InputMethodHint::ImhPreferNumbers</set>
+                </property>
+                <property name="text">
+                 <string>180</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_55">
+                <property name="text">
+                 <string>Largeur ° = </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="syno_region_largeur_txt">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>20</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_6">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="syno_ok_region_btn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Séquence  Region </string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="Line" name="line_3">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QFrame" name="frame_4">
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Shape::StyledPanel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Shadow::Plain</enum>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_39">
+            <item>
+             <widget class="QLabel" name="label_56">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Sphère</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_58">
+              <item>
+               <widget class="QLabel" name="label_57">
+                <property name="text">
+                 <string>L° central =</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="syno_L2_txt">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="autoFillBackground">
+                 <bool>true</bool>
+                </property>
+                <property name="inputMethodHints">
+                 <set>Qt::InputMethodHint::ImhPreferNumbers</set>
+                </property>
+                <property name="text">
+                 <string>135</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_58">
+                <property name="text">
+                 <string>B° pole =</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="syno_B2_txt">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="inputMethodHints">
+                 <set>Qt::InputMethodHint::ImhPreferNumbers</set>
+                </property>
+                <property name="text">
+                 <string>0</string>
+                </property>
+                <property name="clearButtonEnabled">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="syno_reset_btn">
+                <property name="text">
+                 <string>Reset</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_17">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_37">
+              <item>
+               <widget class="QCheckBox" name="syno_grid_sphere_chk">
+                <property name="text">
+                 <string>Grille</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="syno_color_combo">
+                <item>
+                 <property name="text">
+                  <string>Jaune</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Bleu</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Noir</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Blanc</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Vert</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Rouge</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Cyan</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Violet</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Orange</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_52">
+                <property name="text">
+                 <string>Colorisation : </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="syno_colorimg_combo">
+                <item>
+                 <property name="text">
+                  <string>Aucune</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>H-alpha</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Calcium</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Pale</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Helium</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Magnesium</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>H Béta</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Sodium</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_20">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="syno_ok_sphere_btn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Sphère Synoptique</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_47" stretch="1">
+              <item>
+               <widget class="QSlider" name="syno_anim_slider">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">/* --- Piste --- */
+QSlider::groove:horizontal {
+    height: 6px;
+    /*background: #888;
+    border-radius: 3px;*/
+}
+
+QSlider::groove:horizontal:disabled {
+    background: #444;
+}
+
+/* --- Remplissage avant le handle ---
+QSlider::sub-page:horizontal {
+    background: #4caf50;
+    border-radius: 3px;
+}
+ */
+
+QSlider::sub-page:horizontal:disabled {
+    background: #666;
+}
+
+/* --- Remplissage après le handle --- */
+
+/*QSlider::add-page:horizontal {
+    background: #aaa;
+    border-radius: 3px;
+}*/
+
+QSlider::add-page:horizontal:disabled {
+    background: #666;
+}
+
+/* --- Curseur (handle) --- */
+QSlider::handle:horizontal {
+    width: 8px;
+    height: 20px;
+	/*margin: -2px 0;
+    background: #ffffff;
+    border: 1px solid #4caf50;
+    border-radius: 4px;*/
+
+    
+}
+
+QSlider::handle:horizontal:disabled {
+    background: #222;
+    /*border: 1px solid #111;*/
+}</string>
+                </property>
+                <property name="maximum">
+                 <number>360</number>
+                </property>
+                <property name="singleStep">
+                 <number>5</number>
+                </property>
+                <property name="pageStep">
+                 <number>15</number>
+                </property>
+                <property name="sliderPosition">
+                 <number>180</number>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="invertedAppearance">
+                 <bool>false</bool>
+                </property>
+                <property name="invertedControls">
+                 <bool>true</bool>
+                </property>
+                <property name="tickPosition">
+                 <enum>QSlider::TickPosition::TicksBothSides</enum>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_51">
+              <item>
+               <widget class="QLabel" name="label_couv">
+                <property name="text">
+                 <string>Couverture ° : </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="syno_couv_combo">
+                <item>
+                 <property name="text">
+                  <string>360</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>270</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>180</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>90</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="syno_make_anim_btn">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Animation </string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_6">
+           <property name="orientation">
+            <enum>Qt::Orientation::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>12</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_50">
+           <property name="leftMargin">
+            <number>9</number>
+           </property>
+           <property name="rightMargin">
+            <number>9</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="syno_saveas_btn">
+             <property name="text">
+              <string> Enregistre Image...</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="syno_exportas_btn">
+             <property name="text">
+              <string>Enregistre Graph...</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
       </widget>
      </item>
      <item>
@@ -3562,8 +4354,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </connection>
  </connections>
  <buttongroups>
+  <buttongroup name="buttonGroup_3"/>
   <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
-  <buttongroup name="buttonGroup_3"/>
  </buttongroups>
 </ui>

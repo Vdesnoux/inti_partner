@@ -2,6 +2,24 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>Dialog</name>
+    <message>
+        <location filename="movie.ui" line="14"/>
+        <source>Dialog</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="movie.ui" line="54"/>
+        <source>Replay</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="movie.ui" line="61"/>
+        <source>Fermer</source>
+        <translation>Close</translation>
+    </message>
+</context>
+<context>
     <name>Form</name>
     <message>
         <location filename="gong.ui" line="14"/>
@@ -32,12 +50,12 @@
 <context>
     <name>Inti_main_wnd</name>
     <message>
-        <location filename="inti_partner.ui" line="3053"/>
+        <location filename="inti_partner.ui" line="3127"/>
         <source>Amélioration Image Hélium</source>
         <translation>Helium image improvement</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3044"/>
+        <location filename="inti_partner.ui" line="3118"/>
         <source>Ajouter continuum</source>
         <translation>Add continuum</translation>
     </message>
@@ -55,8 +73,9 @@
         <location filename="inti_partner.ui" line="953"/>
         <location filename="inti_partner.ui" line="1077"/>
         <location filename="inti_partner.ui" line="1111"/>
-        <location filename="inti_partner.ui" line="2420"/>
-        <location filename="inti_partner.ui" line="2443"/>
+        <location filename="inti_partner.ui" line="1188"/>
+        <location filename="inti_partner.ui" line="2494"/>
+        <location filename="inti_partner.ui" line="2517"/>
         <source>Ouvrir</source>
         <translation>Open</translation>
     </message>
@@ -122,7 +141,7 @@
     <message>
         <location filename="inti_partner.ui" line="350"/>
         <location filename="inti_partner.ui" line="748"/>
-        <location filename="inti_partner.ui" line="1658"/>
+        <location filename="inti_partner.ui" line="1732"/>
         <source>Eliminer</source>
         <translation>Remove</translation>
     </message>
@@ -173,61 +192,61 @@
         <translation>File to process</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1212"/>
+        <location filename="inti_partner.ui" line="1283"/>
         <source>Paramètres</source>
         <translation>Parameters</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1457"/>
+        <location filename="inti_partner.ui" line="1531"/>
         <source>Base Fichiers</source>
         <translation>Base files</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1470"/>
-        <location filename="inti_partner.ui" line="1864"/>
+        <location filename="inti_partner.ui" line="1544"/>
+        <location filename="inti_partner.ui" line="1938"/>
         <source>Ouvrir liste</source>
         <translation>Open list</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1503"/>
+        <location filename="inti_partner.ui" line="1577"/>
         <source>Tri par qualité</source>
         <translation>Sort by quality</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1516"/>
+        <location filename="inti_partner.ui" line="1590"/>
         <source>Tri par nom</source>
         <translation>Sort by name</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1543"/>
+        <location filename="inti_partner.ui" line="1617"/>
         <source>Selections</source>
         <translation>Selections</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1568"/>
+        <location filename="inti_partner.ui" line="1642"/>
         <source>Enregistrer</source>
         <translation>Save</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1581"/>
-        <location filename="inti_partner.ui" line="3305"/>
-        <location filename="inti_partner.ui" line="3343"/>
-        <location filename="inti_partner.ui" line="3382"/>
+        <location filename="inti_partner.ui" line="1655"/>
+        <location filename="inti_partner.ui" line="3399"/>
+        <location filename="inti_partner.ui" line="3437"/>
+        <location filename="inti_partner.ui" line="3476"/>
         <source>Effacer</source>
         <translation>Remove</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1594"/>
+        <location filename="inti_partner.ui" line="1668"/>
         <source>Base</source>
         <translation>Base</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1614"/>
+        <location filename="inti_partner.ui" line="1688"/>
         <source>Images</source>
         <translation>Images</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1621"/>
+        <location filename="inti_partner.ui" line="1695"/>
         <source>Ouvrir Liste</source>
         <translation>Open list</translation>
     </message>
@@ -236,30 +255,30 @@
         <translation type="vanished">Remove</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1665"/>
+        <location filename="inti_partner.ui" line="1739"/>
         <source>Enregistrer Liste</source>
         <translation>Save list</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1696"/>
+        <location filename="inti_partner.ui" line="1770"/>
         <source>Seconde série :</source>
         <translation>Second serie :</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1813"/>
-        <location filename="inti_partner.ui" line="2472"/>
+        <location filename="inti_partner.ui" line="1887"/>
+        <location filename="inti_partner.ui" line="2546"/>
         <source>Résultats</source>
         <translation>Results</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2185"/>
+        <location filename="inti_partner.ui" line="2259"/>
         <source>Renforcement</source>
         <translation>Enhancement</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2194"/>
-        <location filename="inti_partner.ui" line="2734"/>
-        <location filename="inti_partner.ui" line="2785"/>
+        <location filename="inti_partner.ui" line="2268"/>
+        <location filename="inti_partner.ui" line="2808"/>
+        <location filename="inti_partner.ui" line="2859"/>
         <source>Aucun</source>
         <translation>None</translation>
     </message>
@@ -272,19 +291,19 @@
         <translation type="vanished">High</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1844"/>
+        <location filename="inti_partner.ui" line="1918"/>
         <source>Fichiers</source>
         <translation>Files</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1851"/>
-        <location filename="inti_partner.ui" line="3096"/>
-        <location filename="inti_partner.ui" line="3419"/>
+        <location filename="inti_partner.ui" line="1925"/>
+        <location filename="inti_partner.ui" line="3170"/>
+        <location filename="inti_partner.ui" line="3513"/>
         <source>Annuler</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1871"/>
+        <location filename="inti_partner.ui" line="1945"/>
         <source>Ajouter</source>
         <translation>Add</translation>
     </message>
@@ -300,7 +319,7 @@
     </message>
     <message>
         <location filename="inti_partner.ui" line="522"/>
-        <location filename="inti_partner.ui" line="1918"/>
+        <location filename="inti_partner.ui" line="1992"/>
         <source>Animation</source>
         <translation></translation>
     </message>
@@ -342,68 +361,70 @@
     </message>
     <message>
         <location filename="inti_partner.ui" line="1097"/>
-        <location filename="inti_partner.ui" line="3231"/>
+        <location filename="inti_partner.ui" line="3325"/>
+        <location filename="inti_partner.ui" line="3599"/>
+        <location filename="inti_partner.ui" line="3908"/>
         <source>Grille</source>
         <translation>Grid</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1264"/>
+        <location filename="inti_partner.ui" line="1338"/>
         <source>Type de fichiers</source>
         <translation>Files type</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1270"/>
+        <location filename="inti_partner.ui" line="1344"/>
         <source>Png</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1283"/>
+        <location filename="inti_partner.ui" line="1357"/>
         <source>Fits</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1293"/>
+        <location filename="inti_partner.ui" line="1367"/>
         <source>Ser</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1385"/>
+        <location filename="inti_partner.ui" line="1459"/>
         <source>Clahe</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1411"/>
+        <location filename="inti_partner.ui" line="1485"/>
         <source>Protus</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1359"/>
-        <location filename="inti_partner.ui" line="1715"/>
+        <location filename="inti_partner.ui" line="1433"/>
+        <location filename="inti_partner.ui" line="1789"/>
         <source>Cont</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1346"/>
+        <location filename="inti_partner.ui" line="1420"/>
         <source>Doppler</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1326"/>
+        <location filename="inti_partner.ui" line="1400"/>
         <source>Couleur</source>
         <translation>Color</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1372"/>
+        <location filename="inti_partner.ui" line="1446"/>
         <source>Free</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1398"/>
+        <location filename="inti_partner.ui" line="1472"/>
         <source>Raw</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1333"/>
+        <location filename="inti_partner.ui" line="1407"/>
         <source>Tous</source>
         <translation>All</translation>
     </message>
@@ -413,318 +434,330 @@
         <translation>Erase</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1303"/>
+        <location filename="inti_partner.ui" line="1174"/>
+        <source>Synoptic</source>
+        <translation>Synoptic</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="1377"/>
         <source>Tiff</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1424"/>
+        <location filename="inti_partner.ui" line="1498"/>
         <source>Disk</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1687"/>
+        <location filename="inti_partner.ui" line="1761"/>
         <source>Addition simple</source>
         <translation>Simple addition</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1710"/>
-        <location filename="inti_partner.ui" line="2350"/>
+        <location filename="inti_partner.ui" line="1784"/>
+        <location filename="inti_partner.ui" line="2424"/>
         <source>None</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1727"/>
+        <location filename="inti_partner.ui" line="1801"/>
         <source>Sharp Low</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1740"/>
+        <location filename="inti_partner.ui" line="1814"/>
         <source>Sharp High</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1754"/>
+        <location filename="inti_partner.ui" line="1828"/>
         <source>Taille patch : </source>
         <translation>Patch size : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1767"/>
+        <location filename="inti_partner.ui" line="1841"/>
         <source>128</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1801"/>
-        <location filename="inti_partner.ui" line="2244"/>
-        <location filename="inti_partner.ui" line="2465"/>
+        <location filename="inti_partner.ui" line="1875"/>
+        <location filename="inti_partner.ui" line="2318"/>
+        <location filename="inti_partner.ui" line="2539"/>
         <source>Go !</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1898"/>
+        <location filename="inti_partner.ui" line="1972"/>
         <source>Préparer Animation</source>
         <translation>Prepare Animation</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1929"/>
+        <location filename="inti_partner.ui" line="2003"/>
         <source>Nombre d&apos;images acquises : </source>
         <translation>Number of acquired images : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1936"/>
-        <location filename="inti_partner.ui" line="2065"/>
-        <location filename="inti_partner.ui" line="2079"/>
-        <location filename="inti_partner.ui" line="2635"/>
+        <location filename="inti_partner.ui" line="2010"/>
+        <location filename="inti_partner.ui" line="2139"/>
+        <location filename="inti_partner.ui" line="2153"/>
+        <location filename="inti_partner.ui" line="2709"/>
+        <location filename="inti_partner.ui" line="3575"/>
+        <location filename="inti_partner.ui" line="3884"/>
         <source>0</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1947"/>
+        <location filename="inti_partner.ui" line="2021"/>
         <source>Nombre final d&apos;images  : </source>
         <translation>Final number of images : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1960"/>
+        <location filename="inti_partner.ui" line="2034"/>
         <source>10</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1972"/>
+        <location filename="inti_partner.ui" line="2046"/>
         <source>Interpolation temporelle</source>
         <translation>Time interpolation</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1984"/>
+        <location filename="inti_partner.ui" line="2058"/>
         <source>Images par seconde : </source>
         <translation>Frame per second : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="1997"/>
-        <location filename="inti_partner.ui" line="2103"/>
+        <location filename="inti_partner.ui" line="2071"/>
+        <location filename="inti_partner.ui" line="2177"/>
         <source>1</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2017"/>
+        <location filename="inti_partner.ui" line="2091"/>
         <source>Durée du film : </source>
         <translation>Movie length : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2037"/>
+        <location filename="inti_partner.ui" line="2111"/>
         <source>secondes</source>
         <translation>seconds</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2058"/>
+        <location filename="inti_partner.ui" line="2132"/>
         <source>Image hauteur : </source>
         <translation>Image height : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2072"/>
+        <location filename="inti_partner.ui" line="2146"/>
         <source> largeur : </source>
         <translation> width : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2090"/>
+        <location filename="inti_partner.ui" line="2164"/>
         <source>Facteur d&apos;échelle : </source>
         <translation>Scale ratio : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2124"/>
+        <location filename="inti_partner.ui" line="2198"/>
         <source>Nom film animation : </source>
         <translation>Animation file name : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2131"/>
+        <location filename="inti_partner.ui" line="2205"/>
         <source>anim_inti</source>
         <translation>anim_inti</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2149"/>
+        <location filename="inti_partner.ui" line="2223"/>
         <source>Créer !</source>
         <translation>Create !</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2160"/>
+        <location filename="inti_partner.ui" line="2234"/>
         <source>Pas de fichier log</source>
         <translation>No log file</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2262"/>
+        <location filename="inti_partner.ui" line="2336"/>
         <source>Taille pixel : </source>
         <translation>Pixel size : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2275"/>
+        <location filename="inti_partner.ui" line="2349"/>
         <source>4.8</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2282"/>
+        <location filename="inti_partner.ui" line="2356"/>
         <source>microns</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2291"/>
+        <location filename="inti_partner.ui" line="2365"/>
         <source>Inversion Haut / Bas</source>
         <translation>Up/Down inversion</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2304"/>
+        <location filename="inti_partner.ui" line="2378"/>
         <source>Localiser</source>
         <translation>Localize</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2324"/>
+        <location filename="inti_partner.ui" line="2398"/>
         <source>Spectre</source>
         <translation>Spectrum</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2335"/>
+        <location filename="inti_partner.ui" line="2409"/>
         <source>Reset</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2342"/>
+        <location filename="inti_partner.ui" line="2416"/>
         <source>Allez à...</source>
         <translation>Go to...</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2355"/>
+        <location filename="inti_partner.ui" line="2429"/>
         <source>CaH&amp;K</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2360"/>
-        <location filename="inti_partner.ui" line="2837"/>
+        <location filename="inti_partner.ui" line="2434"/>
+        <location filename="inti_partner.ui" line="2911"/>
         <source>H Béta</source>
         <translation>H Beta</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2365"/>
+        <location filename="inti_partner.ui" line="2439"/>
         <source>Mg Triplet</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2370"/>
+        <location filename="inti_partner.ui" line="2444"/>
         <source>Fe XIV 5303</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2375"/>
+        <location filename="inti_partner.ui" line="2449"/>
         <source>Helium D3 - Na D</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2380"/>
+        <location filename="inti_partner.ui" line="2454"/>
         <source>Fe I 6173 - 6302</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2385"/>
+        <location filename="inti_partner.ui" line="2459"/>
         <source>Fe X 6375</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2390"/>
-        <location filename="inti_partner.ui" line="2812"/>
+        <location filename="inti_partner.ui" line="2464"/>
+        <location filename="inti_partner.ui" line="2886"/>
         <source>H-alpha</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2407"/>
+        <location filename="inti_partner.ui" line="2481"/>
         <source>Polarisation droite</source>
         <translation>Right polarization</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2430"/>
+        <location filename="inti_partner.ui" line="2504"/>
         <source>Polarisation gauche</source>
         <translation>Left polarization</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2479"/>
+        <location filename="inti_partner.ui" line="2553"/>
         <source> Correction bandes verticales</source>
         <translation> Vertical bands correction</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2501"/>
+        <location filename="inti_partner.ui" line="2575"/>
         <source>SER analyse</source>
         <translation>SER analysis</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2516"/>
+        <location filename="inti_partner.ui" line="2590"/>
         <source>Allez à la trame : </source>
         <translation>Go to frame : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2549"/>
+        <location filename="inti_partner.ui" line="2623"/>
         <source>Découper un fichier SER</source>
         <translation>SER file crop</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2564"/>
+        <location filename="inti_partner.ui" line="2638"/>
         <source>De la trame : </source>
         <translation>From frame : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2587"/>
+        <location filename="inti_partner.ui" line="2661"/>
         <source>à :</source>
         <translation>to :</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2606"/>
+        <location filename="inti_partner.ui" line="2680"/>
         <source>Enregistrer sous ...</source>
         <translation>Save as ...</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2628"/>
+        <location filename="inti_partner.ui" line="2702"/>
         <source>Position X : </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2648"/>
+        <location filename="inti_partner.ui" line="2722"/>
         <source>&lt;</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2661"/>
+        <location filename="inti_partner.ui" line="2735"/>
         <source>&gt;</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2689"/>
+        <location filename="inti_partner.ui" line="2763"/>
         <source>Clahe :</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2749"/>
+        <location filename="inti_partner.ui" line="2823"/>
         <source>Renforcement :</source>
         <translation>Enhancement :</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3240"/>
-        <location filename="inti_partner.ui" line="3312"/>
+        <location filename="inti_partner.ui" line="3300"/>
+        <source>Active Regions</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3334"/>
+        <location filename="inti_partner.ui" line="3406"/>
         <source>Filigrane</source>
         <translation>Watermark</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3260"/>
-        <location filename="inti_partner.ui" line="3361"/>
+        <location filename="inti_partner.ui" line="3354"/>
+        <location filename="inti_partner.ui" line="3455"/>
         <source>Position</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3268"/>
+        <location filename="inti_partner.ui" line="3362"/>
         <source>Bas </source>
         <translation>Bottom </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3273"/>
+        <location filename="inti_partner.ui" line="3367"/>
         <source>Haut </source>
         <translation>Top </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3289"/>
+        <location filename="inti_partner.ui" line="3383"/>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
@@ -736,194 +769,320 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3323"/>
+        <location filename="inti_partner.ui" line="3417"/>
         <source>Angle :</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3336"/>
+        <location filename="inti_partner.ui" line="3430"/>
         <source>45</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3350"/>
+        <location filename="inti_partner.ui" line="3444"/>
         <source>Distance</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3369"/>
+        <location filename="inti_partner.ui" line="3463"/>
         <source>Haut</source>
         <translation>Top</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3374"/>
+        <location filename="inti_partner.ui" line="3468"/>
         <source>Bas</source>
         <translation>Bottom</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3389"/>
+        <location filename="inti_partner.ui" line="3483"/>
         <source>Terre</source>
         <translation>Earth</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3460"/>
+        <location filename="inti_partner.ui" line="3553"/>
+        <source>Carte</source>
+        <translation>Map</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3562"/>
+        <source>L° origine = </source>
+        <translation>L° origin = </translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3625"/>
+        <location filename="inti_partner.ui" line="3924"/>
+        <source>Bleu</source>
+        <translation>Blue</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3630"/>
+        <location filename="inti_partner.ui" line="3939"/>
+        <source>Vert</source>
+        <translation>Green</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3635"/>
+        <location filename="inti_partner.ui" line="3944"/>
+        <source>Rouge</source>
+        <translation>Red</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3640"/>
+        <location filename="inti_partner.ui" line="3949"/>
+        <source>Cyan</source>
+        <translation>Cyan</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3645"/>
+        <location filename="inti_partner.ui" line="3954"/>
+        <source>Violet</source>
+        <translation>Violet</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3650"/>
+        <location filename="inti_partner.ui" line="3959"/>
+        <source>Orange</source>
+        <translation>Orange</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3674"/>
+        <source>AR</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3692"/>
+        <source>  Carte Synoptique</source>
+        <translation>  Synoptic Map</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3726"/>
+        <source>Séquence temps-longitude</source>
+        <translation>Sequence time-longitude</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3735"/>
+        <source>L° Region =</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3751"/>
+        <source>180</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3758"/>
+        <source>Largeur ° = </source>
+        <translation>Width ° = </translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3771"/>
+        <source>20</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3799"/>
+        <source>Séquence  Region </source>
+        <translation>Region Sequence </translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3833"/>
+        <source>Sphère</source>
+        <translation>Sphere</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3842"/>
+        <source>L° central =</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3861"/>
+        <source>135</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3868"/>
+        <source>B° pole =</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="3988"/>
+        <source>Sphère Synoptique</source>
+        <translation>Sphere Synoptic</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="4082"/>
+        <source>Animation </source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="4115"/>
+        <source> Enregistre Image...</source>
+        <translation> Save Image...</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="4122"/>
+        <source>Enregistre Graph...</source>
+        <translation>Save Graph...</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.ui" line="4156"/>
         <source>Version : </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3484"/>
+        <location filename="inti_partner.ui" line="4180"/>
         <source>Exit</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3507"/>
+        <location filename="inti_partner.ui" line="4203"/>
         <source>Console</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2207"/>
-        <location filename="inti_partner.ui" line="2698"/>
-        <location filename="inti_partner.ui" line="2758"/>
+        <location filename="inti_partner.ui" line="2281"/>
+        <location filename="inti_partner.ui" line="2772"/>
+        <location filename="inti_partner.ui" line="2832"/>
         <source>Léger</source>
         <translation>Light</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2220"/>
-        <location filename="inti_partner.ui" line="2711"/>
-        <location filename="inti_partner.ui" line="2768"/>
+        <location filename="inti_partner.ui" line="2294"/>
+        <location filename="inti_partner.ui" line="2785"/>
+        <location filename="inti_partner.ui" line="2842"/>
         <source>Fort</source>
         <translation>High</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2721"/>
-        <location filename="inti_partner.ui" line="2775"/>
+        <location filename="inti_partner.ui" line="2795"/>
+        <location filename="inti_partner.ui" line="2849"/>
         <source>Modéré</source>
         <translation>Medium</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2799"/>
+        <location filename="inti_partner.ui" line="2873"/>
         <source>Colorisation : </source>
         <translation>Colorization : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2807"/>
+        <location filename="inti_partner.ui" line="2881"/>
         <source>Aucune</source>
         <translation>None</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2817"/>
+        <location filename="inti_partner.ui" line="2891"/>
         <source>Calcium</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2822"/>
+        <location filename="inti_partner.ui" line="2896"/>
         <source>Pale</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2827"/>
+        <location filename="inti_partner.ui" line="2901"/>
         <source>Helium</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2832"/>
+        <location filename="inti_partner.ui" line="2906"/>
         <source>Magnesium</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2842"/>
+        <location filename="inti_partner.ui" line="2916"/>
         <source>Sodium</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2896"/>
+        <location filename="inti_partner.ui" line="2970"/>
         <source>Appliquer</source>
         <translation>Apply</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2929"/>
+        <location filename="inti_partner.ui" line="3003"/>
         <source>Largeur :</source>
         <translation>Width :</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2943"/>
+        <location filename="inti_partner.ui" line="3017"/>
         <source>Hauteur :</source>
         <translation>Height :</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2961"/>
+        <location filename="inti_partner.ui" line="3035"/>
         <source>X : </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2978"/>
+        <location filename="inti_partner.ui" line="3052"/>
         <source>Y : </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2995"/>
+        <location filename="inti_partner.ui" line="3069"/>
         <source>Test</source>
         <translation>Test</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3002"/>
+        <location filename="inti_partner.ui" line="3076"/>
         <source>Découper</source>
         <translation>Crop</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2854"/>
+        <location filename="inti_partner.ui" line="2928"/>
         <source>Rotation : </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2880"/>
+        <location filename="inti_partner.ui" line="2954"/>
         <source>°</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="2887"/>
+        <location filename="inti_partner.ui" line="2961"/>
         <source>Angle P</source>
         <translation>P angle</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3037"/>
+        <location filename="inti_partner.ui" line="3111"/>
         <source>Image Hélium : </source>
         <translation>Helium image : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3060"/>
+        <location filename="inti_partner.ui" line="3134"/>
         <source>Magnetogramme : </source>
         <translation>Magnetogram : </translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3067"/>
+        <location filename="inti_partner.ui" line="3141"/>
         <source>Amélioration Image  Magnetogramme</source>
         <translation>Magnetogram Image Enhancement</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3105"/>
+        <location filename="inti_partner.ui" line="3179"/>
         <source>Infos</source>
         <translation></translation>
     </message>
     <message>
         <location filename="inti_partner.ui" line="1026"/>
-        <location filename="inti_partner.ui" line="3112"/>
-        <location filename="inti_partner.ui" line="3426"/>
+        <location filename="inti_partner.ui" line="3186"/>
+        <location filename="inti_partner.ui" line="3520"/>
         <source>Enregistrer sous...</source>
         <translation>Save as...</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3125"/>
+        <location filename="inti_partner.ui" line="3199"/>
         <source>Orientation</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3143"/>
+        <location filename="inti_partner.ui" line="3217"/>
         <source>Date : </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3153"/>
+        <location filename="inti_partner.ui" line="3227"/>
         <source>Gong</source>
         <translation></translation>
     </message>
@@ -932,42 +1091,48 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">P angle :</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3165"/>
+        <location filename="inti_partner.ui" line="3239"/>
         <source>Grille de StonyHurst</source>
         <translation>StonyHurst grid</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3183"/>
+        <location filename="inti_partner.ui" line="3257"/>
         <source>Couleur grille</source>
         <translation>Grid color</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3191"/>
+        <location filename="inti_partner.ui" line="3265"/>
+        <location filename="inti_partner.ui" line="3620"/>
+        <location filename="inti_partner.ui" line="3919"/>
         <source>Jaune</source>
         <translation>Yellow</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3196"/>
+        <location filename="inti_partner.ui" line="3270"/>
+        <location filename="inti_partner.ui" line="3615"/>
+        <location filename="inti_partner.ui" line="3929"/>
         <source>Noir</source>
         <translation>Black</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3201"/>
+        <location filename="inti_partner.ui" line="3275"/>
+        <location filename="inti_partner.ui" line="3610"/>
+        <location filename="inti_partner.ui" line="3934"/>
         <source>Blanc</source>
         <translation>White</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3211"/>
+        <location filename="inti_partner.ui" line="3287"/>
         <source>Labels</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3221"/>
+        <location filename="inti_partner.ui" line="3309"/>
         <source>Angle P au Nord</source>
         <translation>P angle at North</translation>
     </message>
     <message>
-        <location filename="inti_partner.ui" line="3447"/>
+        <location filename="inti_partner.ui" line="4143"/>
         <source>Fr</source>
         <translation>En</translation>
     </message>
@@ -993,12 +1158,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
 <context>
     <name>img_wnd</name>
     <message>
-        <location filename="inti_partner.py" line="4676"/>
+        <location filename="inti_partner.py" line="5622"/>
         <source>Sauver fichier png</source>
         <translation>Save png file</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="4676"/>
+        <location filename="inti_partner.py" line="5622"/>
         <source>Fichiers png (*.png);;Tous les fichiers (*)</source>
         <translation>Files png (*.png);;All files (*)</translation>
     </message>
@@ -1014,17 +1179,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
 <context>
     <name>main_wnd_UI</name>
     <message>
-        <location filename="inti_partner.py" line="506"/>
+        <location filename="inti_partner.py" line="551"/>
         <source>Création du fichier intipartner_ini.yaml: </source>
         <translation>File intipartner_ini.yaml created: </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="638"/>
+        <location filename="inti_partner.py" line="684"/>
         <source>Erreur à la sauvegarde de intipartner_ini.yaml : </source>
         <translation>Error saving intipartner_ini.yaml : </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="655"/>
+        <location filename="inti_partner.py" line="701"/>
         <source>Une nouvelle Version est disponible</source>
         <translation>A new Version is available</translation>
     </message>
@@ -1033,10 +1198,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">No files</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1147"/>
-        <location filename="inti_partner.py" line="2081"/>
-        <location filename="inti_partner.py" line="2228"/>
-        <location filename="inti_partner.py" line="2269"/>
+        <location filename="inti_partner.py" line="1255"/>
+        <location filename="inti_partner.py" line="2189"/>
+        <location filename="inti_partner.py" line="2336"/>
+        <location filename="inti_partner.py" line="2378"/>
+        <location filename="inti_partner.py" line="4631"/>
         <source>Selectionner Images</source>
         <translation>Select images</translation>
     </message>
@@ -1045,27 +1211,28 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">Files png (*.png);;Files disk png (*_disk.png);;Files clahe png (*_clahe.png)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1197"/>
+        <location filename="inti_partner.py" line="1305"/>
+        <location filename="inti_partner.py" line="4687"/>
         <source> : Image couleur</source>
         <translation> : colored image</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1231"/>
+        <location filename="inti_partner.py" line="1339"/>
         <source>fichier : </source>
         <translation>file : </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1231"/>
+        <location filename="inti_partner.py" line="1339"/>
         <source>extension inconsistent</source>
         <translation>inconsistent extension</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1312"/>
+        <location filename="inti_partner.py" line="1420"/>
         <source>Fichier </source>
         <translation>File </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1312"/>
+        <location filename="inti_partner.py" line="1420"/>
         <source> non trouvé</source>
         <translation> not found</translation>
     </message>
@@ -1074,28 +1241,28 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">No file log.txt for protuberances image</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1551"/>
-        <location filename="inti_partner.py" line="1559"/>
+        <location filename="inti_partner.py" line="1659"/>
+        <location filename="inti_partner.py" line="1667"/>
         <source> enregistré</source>
         <translation> saved</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1564"/>
-        <location filename="inti_partner.py" line="2001"/>
-        <location filename="inti_partner.py" line="2281"/>
+        <location filename="inti_partner.py" line="1672"/>
+        <location filename="inti_partner.py" line="2109"/>
+        <location filename="inti_partner.py" line="2390"/>
         <source>Ouvrir une liste de fichier</source>
         <translation>Open a list of files</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1564"/>
-        <location filename="inti_partner.py" line="2001"/>
-        <location filename="inti_partner.py" line="2281"/>
+        <location filename="inti_partner.py" line="1672"/>
+        <location filename="inti_partner.py" line="2109"/>
+        <location filename="inti_partner.py" line="2390"/>
         <source>Fichiers liste (t*_sel.txt)</source>
         <translation>File list (t*_sel.txt)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="801"/>
-        <location filename="inti_partner.py" line="1740"/>
+        <location filename="inti_partner.py" line="909"/>
+        <location filename="inti_partner.py" line="1848"/>
         <source>Sélection répertoire</source>
         <translation>Directory selection</translation>
     </message>
@@ -1116,32 +1283,32 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">Files png (*.png);;Filies disk png (*_disk.png);;Files protus (*_protus.png);;All files (*)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2439"/>
+        <location filename="inti_partner.py" line="2548"/>
         <source>Nb final d&apos;image : doit etre valeur entiere numérique</source>
         <translation>Final nb of images : shall be an integer numerical value</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2467"/>
+        <location filename="inti_partner.py" line="2577"/>
         <source>erreur de datation</source>
         <translation>Datation error</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2473"/>
+        <location filename="inti_partner.py" line="2583"/>
         <source>Pas de fichier _log.txt</source>
         <translation>No _log.txt file</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2487"/>
+        <location filename="inti_partner.py" line="2599"/>
         <source>Images par seconde supérieure à 30 i/s</source>
         <translation>Frame per second higher that 30 fps</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2491"/>
+        <location filename="inti_partner.py" line="2603"/>
         <source>Images par seconde : doit etre valeur entiere numérique</source>
         <translation>Frame per second shall be a numerical value</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2505"/>
+        <location filename="inti_partner.py" line="2617"/>
         <source>Grande dimension d&apos;image : le temps de calcul peut être très long - voulez-vous continuer ?</source>
         <translation>Large image size : computing time can be very long - do you want to continue ?</translation>
     </message>
@@ -1150,25 +1317,25 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">Scale ratio : shall be a numerical value</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2538"/>
+        <location filename="inti_partner.py" line="2650"/>
         <source> fichiers</source>
         <translation> files</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2558"/>
+        <location filename="inti_partner.py" line="2670"/>
         <source> trames</source>
         <translation> frames</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="941"/>
-        <location filename="inti_partner.py" line="3041"/>
-        <location filename="inti_partner.py" line="3447"/>
+        <location filename="inti_partner.py" line="1049"/>
+        <location filename="inti_partner.py" line="3161"/>
+        <location filename="inti_partner.py" line="3569"/>
         <source>Erreur ouverture fichier : </source>
         <translation>File opening error : </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1082"/>
-        <location filename="inti_partner.py" line="1103"/>
+        <location filename="inti_partner.py" line="1190"/>
+        <location filename="inti_partner.py" line="1211"/>
         <source>ERREUR :  lancement </source>
         <translation>Error : launch </translation>
     </message>
@@ -1181,7 +1348,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">Files png (*.png);;Files disk.png (*_disk.png);;Files protus.png (*_protus.png);;Files clahe.png (*_clahe.png);;Files recon fits (*_recon.fits);;Files fits (*.fits);;All files (*)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2166"/>
+        <location filename="inti_partner.py" line="2274"/>
         <source>Erreur lecture géométrie</source>
         <translation>Error reading geometry</translation>
     </message>
@@ -1190,297 +1357,358 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">Files png (*.png);;Files disk png (*_disk.png);;Files protus (*_protus.png);;Files clahe png (*_clahe.png);;All files (*)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1118"/>
-        <location filename="inti_partner.py" line="1132"/>
-        <location filename="inti_partner.py" line="2052"/>
-        <location filename="inti_partner.py" line="2066"/>
-        <location filename="inti_partner.py" line="2208"/>
-        <location filename="inti_partner.py" line="2218"/>
-        <location filename="inti_partner.py" line="2250"/>
-        <location filename="inti_partner.py" line="2260"/>
-        <location filename="inti_partner.py" line="3247"/>
-        <location filename="inti_partner.py" line="3261"/>
-        <location filename="inti_partner.py" line="3694"/>
-        <location filename="inti_partner.py" line="3708"/>
+        <location filename="inti_partner.py" line="1226"/>
+        <location filename="inti_partner.py" line="1240"/>
+        <location filename="inti_partner.py" line="2160"/>
+        <location filename="inti_partner.py" line="2174"/>
+        <location filename="inti_partner.py" line="2316"/>
+        <location filename="inti_partner.py" line="2326"/>
+        <location filename="inti_partner.py" line="2359"/>
+        <location filename="inti_partner.py" line="2369"/>
+        <location filename="inti_partner.py" line="3367"/>
+        <location filename="inti_partner.py" line="3382"/>
+        <location filename="inti_partner.py" line="3821"/>
+        <location filename="inti_partner.py" line="3836"/>
+        <location filename="inti_partner.py" line="4601"/>
+        <location filename="inti_partner.py" line="4616"/>
         <source>Fichiers disk png (*_disk.png)</source>
         <translation>Files disk png (*_disk.png)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1119"/>
-        <location filename="inti_partner.py" line="1133"/>
-        <location filename="inti_partner.py" line="2053"/>
-        <location filename="inti_partner.py" line="2067"/>
-        <location filename="inti_partner.py" line="2209"/>
-        <location filename="inti_partner.py" line="2219"/>
-        <location filename="inti_partner.py" line="2251"/>
-        <location filename="inti_partner.py" line="2261"/>
-        <location filename="inti_partner.py" line="3248"/>
-        <location filename="inti_partner.py" line="3262"/>
-        <location filename="inti_partner.py" line="3695"/>
-        <location filename="inti_partner.py" line="3709"/>
+        <location filename="inti_partner.py" line="1227"/>
+        <location filename="inti_partner.py" line="1241"/>
+        <location filename="inti_partner.py" line="2161"/>
+        <location filename="inti_partner.py" line="2175"/>
+        <location filename="inti_partner.py" line="2317"/>
+        <location filename="inti_partner.py" line="2327"/>
+        <location filename="inti_partner.py" line="2360"/>
+        <location filename="inti_partner.py" line="2370"/>
+        <location filename="inti_partner.py" line="3369"/>
+        <location filename="inti_partner.py" line="3384"/>
+        <location filename="inti_partner.py" line="3823"/>
+        <location filename="inti_partner.py" line="3838"/>
+        <location filename="inti_partner.py" line="4603"/>
+        <location filename="inti_partner.py" line="4618"/>
         <source>Fichiers protus png (*_protus.png)</source>
         <translation>Files protus png (*_protus.png)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1120"/>
-        <location filename="inti_partner.py" line="1134"/>
-        <location filename="inti_partner.py" line="2054"/>
-        <location filename="inti_partner.py" line="2068"/>
-        <location filename="inti_partner.py" line="2210"/>
-        <location filename="inti_partner.py" line="2220"/>
-        <location filename="inti_partner.py" line="2252"/>
-        <location filename="inti_partner.py" line="2262"/>
-        <location filename="inti_partner.py" line="3249"/>
-        <location filename="inti_partner.py" line="3263"/>
-        <location filename="inti_partner.py" line="3696"/>
-        <location filename="inti_partner.py" line="3710"/>
+        <location filename="inti_partner.py" line="1228"/>
+        <location filename="inti_partner.py" line="1242"/>
+        <location filename="inti_partner.py" line="2162"/>
+        <location filename="inti_partner.py" line="2176"/>
+        <location filename="inti_partner.py" line="2318"/>
+        <location filename="inti_partner.py" line="2328"/>
+        <location filename="inti_partner.py" line="2361"/>
+        <location filename="inti_partner.py" line="2371"/>
+        <location filename="inti_partner.py" line="3370"/>
+        <location filename="inti_partner.py" line="3385"/>
+        <location filename="inti_partner.py" line="3824"/>
+        <location filename="inti_partner.py" line="3839"/>
+        <location filename="inti_partner.py" line="4604"/>
+        <location filename="inti_partner.py" line="4619"/>
         <source>Fichiers clahe png (*_clahe.png)</source>
         <translation>Files clahe png (*_clahe.png)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1121"/>
-        <location filename="inti_partner.py" line="1135"/>
-        <location filename="inti_partner.py" line="2055"/>
-        <location filename="inti_partner.py" line="2069"/>
-        <location filename="inti_partner.py" line="2211"/>
-        <location filename="inti_partner.py" line="2222"/>
-        <location filename="inti_partner.py" line="2253"/>
-        <location filename="inti_partner.py" line="2264"/>
-        <location filename="inti_partner.py" line="3250"/>
-        <location filename="inti_partner.py" line="3264"/>
-        <location filename="inti_partner.py" line="3697"/>
-        <location filename="inti_partner.py" line="3711"/>
+        <location filename="inti_partner.py" line="1229"/>
+        <location filename="inti_partner.py" line="1243"/>
+        <location filename="inti_partner.py" line="2163"/>
+        <location filename="inti_partner.py" line="2177"/>
+        <location filename="inti_partner.py" line="2319"/>
+        <location filename="inti_partner.py" line="2330"/>
+        <location filename="inti_partner.py" line="2362"/>
+        <location filename="inti_partner.py" line="2373"/>
+        <location filename="inti_partner.py" line="3371"/>
+        <location filename="inti_partner.py" line="3386"/>
+        <location filename="inti_partner.py" line="3825"/>
+        <location filename="inti_partner.py" line="3840"/>
+        <location filename="inti_partner.py" line="4605"/>
+        <location filename="inti_partner.py" line="4620"/>
         <source>Fichiers free (*_free.png)</source>
         <translation>Files free (*_free.png)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1122"/>
-        <location filename="inti_partner.py" line="1131"/>
-        <location filename="inti_partner.py" line="1142"/>
-        <location filename="inti_partner.py" line="2056"/>
-        <location filename="inti_partner.py" line="2065"/>
-        <location filename="inti_partner.py" line="2076"/>
-        <location filename="inti_partner.py" line="2216"/>
-        <location filename="inti_partner.py" line="2217"/>
-        <location filename="inti_partner.py" line="2225"/>
-        <location filename="inti_partner.py" line="2258"/>
-        <location filename="inti_partner.py" line="2259"/>
-        <location filename="inti_partner.py" line="2267"/>
-        <location filename="inti_partner.py" line="3259"/>
-        <location filename="inti_partner.py" line="3260"/>
-        <location filename="inti_partner.py" line="3272"/>
-        <location filename="inti_partner.py" line="3706"/>
-        <location filename="inti_partner.py" line="3707"/>
-        <location filename="inti_partner.py" line="3719"/>
+        <location filename="inti_partner.py" line="1230"/>
+        <location filename="inti_partner.py" line="1239"/>
+        <location filename="inti_partner.py" line="1250"/>
+        <location filename="inti_partner.py" line="2164"/>
+        <location filename="inti_partner.py" line="2173"/>
+        <location filename="inti_partner.py" line="2184"/>
+        <location filename="inti_partner.py" line="2324"/>
+        <location filename="inti_partner.py" line="2325"/>
+        <location filename="inti_partner.py" line="2333"/>
+        <location filename="inti_partner.py" line="2367"/>
+        <location filename="inti_partner.py" line="2368"/>
+        <location filename="inti_partner.py" line="2376"/>
+        <location filename="inti_partner.py" line="3380"/>
+        <location filename="inti_partner.py" line="3381"/>
+        <location filename="inti_partner.py" line="3394"/>
+        <location filename="inti_partner.py" line="3834"/>
+        <location filename="inti_partner.py" line="3835"/>
+        <location filename="inti_partner.py" line="3848"/>
+        <location filename="inti_partner.py" line="4606"/>
+        <location filename="inti_partner.py" line="4615"/>
+        <location filename="inti_partner.py" line="4627"/>
         <source>Tous les fichiers png (*.png)</source>
         <translation>All files png (*.png)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1123"/>
-        <location filename="inti_partner.py" line="1136"/>
-        <location filename="inti_partner.py" line="2057"/>
-        <location filename="inti_partner.py" line="2070"/>
+        <location filename="inti_partner.py" line="1231"/>
+        <location filename="inti_partner.py" line="1244"/>
+        <location filename="inti_partner.py" line="2165"/>
+        <location filename="inti_partner.py" line="2178"/>
+        <location filename="inti_partner.py" line="4607"/>
+        <location filename="inti_partner.py" line="4621"/>
         <source>Fichiers recon fits (*_recon.fits)</source>
         <translation>Files recon fits (*_recon.fits)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1124"/>
-        <location filename="inti_partner.py" line="1137"/>
+        <location filename="inti_partner.py" line="1232"/>
+        <location filename="inti_partner.py" line="1245"/>
+        <location filename="inti_partner.py" line="4608"/>
+        <location filename="inti_partner.py" line="4622"/>
         <source>Fichiers free fits (*_free.fits</source>
         <translation>Files free fits (*_free.fits</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1130"/>
-        <location filename="inti_partner.py" line="1139"/>
-        <location filename="inti_partner.py" line="2058"/>
-        <location filename="inti_partner.py" line="2071"/>
+        <location filename="inti_partner.py" line="1238"/>
+        <location filename="inti_partner.py" line="1247"/>
+        <location filename="inti_partner.py" line="2166"/>
+        <location filename="inti_partner.py" line="2179"/>
+        <location filename="inti_partner.py" line="4614"/>
+        <location filename="inti_partner.py" line="4624"/>
         <source>Fichiers fits (*fits)</source>
         <translation>Files fits (*fits)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1936"/>
+        <location filename="inti_partner.py" line="2044"/>
         <source>Fichiers envoyés à la corbeille : </source>
         <translation>Files send to trash : </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2064"/>
-        <location filename="inti_partner.py" line="2073"/>
+        <location filename="inti_partner.py" line="2172"/>
+        <location filename="inti_partner.py" line="2181"/>
         <source>Tous les fichiers</source>
         <translation>All files</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2526"/>
+        <location filename="inti_partner.py" line="2638"/>
         <source>facteur d&apos;échelle : doit être une valeur numérique</source>
         <translation>Scale factor : shall be numerical value</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2591"/>
+        <location filename="inti_partner.py" line="2703"/>
         <source>ROI : uniformisation des intensités</source>
         <translation>ROI : normalize intensities</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2832"/>
+        <location filename="inti_partner.py" line="2952"/>
         <source>Polarisation droite : Erreur noms de fichier</source>
         <translation>Right polarization : file name errors</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2841"/>
+        <location filename="inti_partner.py" line="2961"/>
         <source>Polarisation droite : Erreur nombre de fichiers polarisation droite r et b différents</source>
         <translation>Right polarization : Number of files error, left and right numbers are different</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2857"/>
+        <location filename="inti_partner.py" line="2977"/>
         <source>Polarisation gauche : Erreur noms de fichier</source>
         <translation>Left polarization : file name errors</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="2866"/>
+        <location filename="inti_partner.py" line="2986"/>
         <source>Polarisation gauche : Erreur nombre de fichiers polarisation gauche r et b différents</source>
         <translation>Left polarization : Number of files error, left and right numbers are different</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3037"/>
+        <location filename="inti_partner.py" line="3157"/>
         <source>Fichier non trouvé : </source>
         <translation>File not found : </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3050"/>
+        <location filename="inti_partner.py" line="3170"/>
         <source>Sauver Trame png</source>
         <translation>Save Frame png</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3070"/>
+        <location filename="inti_partner.py" line="3190"/>
         <source>Valeur trame début doit etre entière et numérique</source>
         <translation>Frame number shall be integer and numerical</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3075"/>
+        <location filename="inti_partner.py" line="3195"/>
         <source>Valeur trame fin doit etre entière et numérique</source>
         <translation>Frame number shall be integer and numerical</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3085"/>
+        <location filename="inti_partner.py" line="3205"/>
         <source>Sauver fichier ser</source>
         <translation>Save SER file</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3085"/>
+        <location filename="inti_partner.py" line="3205"/>
         <source>Fichiers ser (*.ser)</source>
         <translation>Files ser (*.ser)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3251"/>
-        <location filename="inti_partner.py" line="3265"/>
-        <location filename="inti_partner.py" line="3698"/>
-        <location filename="inti_partner.py" line="3712"/>
+        <location filename="inti_partner.py" line="3368"/>
+        <location filename="inti_partner.py" line="3383"/>
+        <location filename="inti_partner.py" line="3822"/>
+        <location filename="inti_partner.py" line="3837"/>
+        <location filename="inti_partner.py" line="4602"/>
+        <location filename="inti_partner.py" line="4617"/>
+        <source>Fichiers cont png (*_cont.png)</source>
+        <translation>Files cont png (*_cont.png)</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.py" line="3372"/>
+        <location filename="inti_partner.py" line="3387"/>
+        <location filename="inti_partner.py" line="3826"/>
+        <location filename="inti_partner.py" line="3841"/>
         <source>Fichiers recon fits (*_recon*.fits)</source>
         <translation>Files recon fits (*_recon*.fits)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3252"/>
-        <location filename="inti_partner.py" line="3266"/>
-        <location filename="inti_partner.py" line="3699"/>
-        <location filename="inti_partner.py" line="3713"/>
+        <location filename="inti_partner.py" line="3373"/>
+        <location filename="inti_partner.py" line="3388"/>
+        <location filename="inti_partner.py" line="3827"/>
+        <location filename="inti_partner.py" line="3842"/>
         <source>Fichiers free fits (*_free.fits)</source>
         <translation>Files free fits (*_free.fits)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3253"/>
-        <location filename="inti_partner.py" line="3267"/>
-        <location filename="inti_partner.py" line="3700"/>
-        <location filename="inti_partner.py" line="3714"/>
+        <location filename="inti_partner.py" line="3374"/>
+        <location filename="inti_partner.py" line="3389"/>
+        <location filename="inti_partner.py" line="3828"/>
+        <location filename="inti_partner.py" line="3843"/>
         <source>Fichiers cont fits (*_cont*.fits)</source>
         <translation>Files cont fits (*_cont*.fits)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3254"/>
-        <location filename="inti_partner.py" line="3269"/>
-        <location filename="inti_partner.py" line="3701"/>
-        <location filename="inti_partner.py" line="3716"/>
+        <location filename="inti_partner.py" line="3375"/>
+        <location filename="inti_partner.py" line="3391"/>
+        <location filename="inti_partner.py" line="3829"/>
+        <location filename="inti_partner.py" line="3845"/>
         <source>Fichiers fits (*.fits)</source>
         <translation>Files fits (*.fits)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3365"/>
-        <location filename="inti_partner.py" line="4179"/>
-        <location filename="inti_partner.py" line="4530"/>
+        <location filename="inti_partner.py" line="4834"/>
+        <location filename="inti_partner.py" line="4922"/>
+        <location filename="inti_partner.py" line="4933"/>
+        <source>L n&apos;est pas un nombre</source>
+        <translation>L is not a number</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.py" line="4927"/>
+        <source>Largeur n&apos;est pas un nombre</source>
+        <translation>Width is not a number</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.py" line="5037"/>
+        <source>L carte n&apos;est pas un nombre</source>
+        <translation>L map is not a number</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.py" line="5045"/>
+        <source>L sphere n&apos;est pas un nombre</source>
+        <translation>L sphere is not a number</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.py" line="5050"/>
+        <location filename="inti_partner.py" line="5111"/>
+        <source>B sphere n&apos;est pas un nombre</source>
+        <translation>B sphere is not a number</translation>
+    </message>
+    <message>
+        <location filename="inti_partner.py" line="5139"/>
+        <source>Creation du gif : </source>
+        <translation>Gif creation : </translation>
+    </message>
+    <message>
+        <location filename="inti_partner.py" line="5444"/>
         <source>Pas de fichier log... analyse image</source>
         <translation>No log file... image analyzing</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3501"/>
+        <location filename="inti_partner.py" line="3623"/>
         <source>Erreur lecture rayon du disque</source>
         <translation>Error reading disk radius</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3532"/>
-        <location filename="inti_partner.py" line="3539"/>
-        <location filename="inti_partner.py" line="3542"/>
-        <location filename="inti_partner.py" line="3567"/>
-        <location filename="inti_partner.py" line="3574"/>
-        <location filename="inti_partner.py" line="3577"/>
+        <location filename="inti_partner.py" line="3654"/>
+        <location filename="inti_partner.py" line="3661"/>
+        <location filename="inti_partner.py" line="3664"/>
+        <location filename="inti_partner.py" line="3689"/>
+        <location filename="inti_partner.py" line="3696"/>
+        <location filename="inti_partner.py" line="3699"/>
         <source>Erreur valeurs x ou y</source>
         <translation>x or y value error</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3593"/>
+        <location filename="inti_partner.py" line="3715"/>
         <source>Sauver fichier </source>
         <translation>Save file </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3593"/>
+        <location filename="inti_partner.py" line="3715"/>
         <source>Fichiers png (*.png);;Fichiers fits (*.fits) </source>
         <translation>Files png (*.png);;Files fits (*.fits) </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3617"/>
+        <location filename="inti_partner.py" line="3739"/>
         <source>Fichier couleur, pas de conversion fits</source>
         <translation>Color file, no fits conversion available</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3721"/>
+        <location filename="inti_partner.py" line="3850"/>
         <source>Selectionner image </source>
         <translation>Select image </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="4104"/>
+        <location filename="inti_partner.py" line="4297"/>
         <source>Fichier _log.txt non trouvé</source>
         <translation>File _log.txt not found</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="4127"/>
+        <location filename="inti_partner.py" line="4320"/>
+        <location filename="inti_partner.py" line="5267"/>
+        <location filename="inti_partner.py" line="5286"/>
         <source>Sauver fichier png</source>
         <translation>Save png file</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="4556"/>
         <source>fichier log non trouvé</source>
-        <translation>Log file not found</translation>
+        <translation type="vanished">Log file not found</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3050"/>
-        <location filename="inti_partner.py" line="4127"/>
+        <location filename="inti_partner.py" line="3170"/>
+        <location filename="inti_partner.py" line="4320"/>
+        <location filename="inti_partner.py" line="5267"/>
+        <location filename="inti_partner.py" line="5286"/>
         <source>Fichiers png (*.png);;Tous les fichiers (*)</source>
         <translation>Files png (*.png);;All files (*)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1045"/>
+        <location filename="inti_partner.py" line="1153"/>
         <source>Changer répertoire INTI</source>
         <translation>Change INTI directory</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1046"/>
+        <location filename="inti_partner.py" line="1154"/>
         <source>Ouvrir INTI</source>
         <translation>Open INTI</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1047"/>
+        <location filename="inti_partner.py" line="1155"/>
         <source>Traiter avec INTI</source>
         <translation>Process with INTI</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="1062"/>
-        <location filename="inti_partner.py" line="1074"/>
+        <location filename="inti_partner.py" line="1170"/>
+        <location filename="inti_partner.py" line="1182"/>
         <source>Répertoire d&apos;inti&apos; :</source>
         <translation>INTI directory :</translation>
     </message>
@@ -1497,19 +1725,19 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">Files png (*.png);;Files disk png (*_disk.png);;Files protus (*_protus.png);;Files clahe (*_clahe.png);;Files free (*_free.png);;All files (*)</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="4186"/>
-        <location filename="inti_partner.py" line="4189"/>
-        <location filename="inti_partner.py" line="4331"/>
+        <location filename="inti_partner.py" line="4379"/>
+        <location filename="inti_partner.py" line="4382"/>
+        <location filename="inti_partner.py" line="4524"/>
         <source>Erreur lecture rayon disque solaire</source>
         <translation>Error reading sun radius</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="4380"/>
+        <location filename="inti_partner.py" line="4573"/>
         <source>Terre</source>
         <translation>Earth</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3659"/>
+        <location filename="inti_partner.py" line="3786"/>
         <source>Erreur calcul angle P</source>
         <translation>Error P angle computation</translation>
     </message>
@@ -1518,22 +1746,22 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation type="vanished">Error log txt</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3387"/>
+        <location filename="inti_partner.py" line="3509"/>
         <source>Erreur fits</source>
         <translation>Error fits</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3394"/>
+        <location filename="inti_partner.py" line="3516"/>
         <source>Erreur angle de rotation</source>
         <translation>Error rotation angle</translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3674"/>
+        <location filename="inti_partner.py" line="3801"/>
         <source>Pas de fichier : </source>
         <translation>No file : </translation>
     </message>
     <message>
-        <location filename="inti_partner.py" line="3988"/>
+        <location filename="inti_partner.py" line="4151"/>
         <source>Mots clefs manquants dans entête fits</source>
         <translation>Keywords missing in fits header</translation>
     </message>

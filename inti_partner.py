@@ -12,8 +12,8 @@ import os, fnmatch
 import yaml as yaml
 
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QApplication,QMenu,QGraphicsPathItem, QGraphicsPixmapItem,QMainWindow,QDialog, QDockWidget, QFileDialog,QMessageBox, QTableWidgetItem, QWidget,QGraphicsLineItem, QListWidgetItem, QVBoxLayout,QGraphicsEllipseItem
-from PySide6.QtCore import QFile, QIODevice, Qt, QSettings, QTimer,QTranslator, QUrl, QRect, Signal, QPoint
+from PySide6.QtWidgets import QApplication,QMenu,QGraphicsPathItem, QGraphicsRectItem,QGraphicsPixmapItem,QMainWindow,QDialog, QDockWidget, QFileDialog,QMessageBox, QTableWidgetItem, QWidget,QGraphicsLineItem, QListWidgetItem, QVBoxLayout,QGraphicsEllipseItem
+from PySide6.QtCore import QFile, QPointF, QSize, QIODevice, Qt, QSettings, QTimer,QTranslator, QUrl, QRect, Signal, QPoint, QRectF
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6 import QtGui
@@ -22,10 +22,13 @@ import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
 from pyqtgraph import ImageView, PlotWidget, LinearRegionItem
 
+
+
 from astropy.io import fits
 import astropy.time
 import numpy as np
 from PIL import Image
+
 import dedistord as ddist
 import cv2 as cv2
 import mosaic as mo
@@ -48,13 +51,16 @@ import requests
 import subprocess
 from send2trash import send2trash
 
+import synoptique as syn
+import time
+
+
 
 # Rediriger matplotlib vers mon cache local
 local_cache = os.path.join(os.path.dirname(__file__), 'matplotlib_cache')
 os.environ['MPLCONFIGDIR'] = local_cache
 import matplotlib.pyplot as plt #only for debug
 
-import time #only for debug
 
 """
 Version 0.4 - 13 avril 2025
@@ -108,7 +114,7 @@ Version 0.9 - sept 2025
 Version 1.0 - sept 25
 - fix bug map selection line et erase lines
 
-Version 1.1 WIP
+Version 1.1 
 - verif si working dir n'existe plus au lancement
 - gestion overflow sur somme dans stack et fix bug
 - mosa sur fichier stacké avec detect geom sur flag "sans fichier log"
@@ -118,10 +124,19 @@ Version 1.1 WIP
 - gestion supprime depuis selector si fichier dans clahe ou complements
 - trad anglaise de supprimer dans selector
 
+Version 1.2 WIP
+- ajout synoptic tab avec sphere, regions, synoptic
+- ajout test fichier log et sinon analyse pour grid et proc
+- ajout telechargement zones actives
+- Zones active affichage sur synoptic et grid
+- correction signe grille angP not at north
+- generation gif et mp4
+- rotation sphere sur souris
+- colorisation sphere et animation
+
 """
 
-
-
+# TODO : syno ajouter et enlever images
 
 
 class main_wnd_UI(QMainWindow) :
@@ -130,12 +145,13 @@ class main_wnd_UI(QMainWindow) :
         #super().__init__(parent)
         super(main_wnd_UI, self).__init__()
         
-        self.version ="1.1"
+        self.version ="1.2"
         
         #fichier GUI par Qt Designer
         loader = QUiLoader()
         loader.registerCustomWidget(ImageView)
         loader.registerCustomWidget(PlotWidget)
+
         ui_file_name=resource_path('inti_partner.ui')
         ui_file = QFile(ui_file_name)
         
@@ -472,8 +488,11 @@ class main_wnd_UI(QMainWindow) :
         #font = QtGui.QFont('Arial', 6)
         #self.ui.grid_view.setFont(font)
         
+        self.ui.grid_view.scene.sigMouseMoved.connect(self.on_mouse_move)
         self.ui.grid_open_btn.clicked.connect(self.grid_open)
         self.ui.grid_on_btn.clicked.connect(self.grid_plot)
+        #self.ui.grid_ar_checkbox.toggled.connect(self.grid_AR)
+        #self.ui.grid_ar_checkbox.setEnabled(False)
         self.ui.grid_hb_btn.clicked.connect(self.grid_hb)
         self.ui.grid_dg_btn.clicked.connect(self.grid_dg)
         self.ui.grid_gong_btn.clicked.connect(self.grid_gong)
@@ -488,6 +507,84 @@ class main_wnd_UI(QMainWindow) :
         self.ui.grid_terre_btn.clicked.connect(self.grid_terre)
         self.ui.grid_terre_cancel_btn.clicked.connect(self.grid_terre_cancel)
         self.img_earth=resource_path('earth.png')
+        self.geom_dict={}
+
+        
+        # tab synoptic
+        # ------------------------------------------------------------------
+        
+        # signaux
+        self.ui.syno_img_open.clicked.connect(self.syno_img_open_clicked)
+        self.ui.syno_ok_carte_btn.clicked.connect(self.syno_run_carte_clicked)
+        self.ui.syno_getAR_btn.clicked.connect(self.syno_getAR)
+        self.ui.syno_ok_sphere_btn.clicked.connect(self.syno_run_sphere_clicked)
+        self.ui.syno_make_anim_btn.clicked.connect(self.syno_make_anim)
+        self.ui.syno_ok_region_btn.clicked.connect(self.syno_run_region_clicked)
+        self.ui.syno_img_list_view.itemClicked.connect(self.syno_img_list_view_sel_changed)
+        #self.ui.syno_img_list_view.selectionModel().selectionChanged.connect(self.syno_img_list_view_sel_changed)
+        self.ui.syno_plot_view.scene().sigMouseMoved.connect(self.on_mouse_move)
+        self.ui.syno_plot_view.scene().sigMouseClicked.connect(self.on_mouse_click)
+        self.ui.syno_anim_slider.valueChanged.connect(self.syno_anim_slider_change)
+        self.ui.syno_exportas_btn.clicked.connect(self.syno_exportas)
+        self.ui.syno_saveas_btn.clicked.connect(self.syno_saveas)
+        self.ui.syno_reset_btn.clicked.connect(self.syno_reset_sphere)
+        
+        
+        self.ui.syno_anim_slider.setEnabled(False)
+        self.ui.syno_make_anim_btn.setEnabled(False)
+        self.ui.syno_getAR_btn.setEnabled(False)
+        
+        # --- initialisation des variables L2/B2 ---
+        self.L2_deg = 0
+        self.B2_deg = 0
+ 
+        # --- patch du ViewBox pour drag personnalisé ---
+        self.vb = self.ui.syno_plot_view.getViewBox()
+        self.vb.sphere_mode = False
+        self.vb.drag_start_pos = None
+        original_drag = self.vb.mouseDragEvent
+ 
+        def custom_drag(ev, axis=None):
+            if getattr(self.vb, 'sphere_mode', False) and ev.button() == Qt.LeftButton:
+                if ev.isStart():
+                    self.vb.drag_start_pos = ev.pos()
+                    self.L2_deg_start = self.L2_deg
+                    self.B2_deg_start = self.B2_deg
+                    ev.accept()
+                    return
+                elif ev.isFinish():
+                    self.vb.drag_start_pos = None
+                    ev.accept()
+                    return
+                else:
+                    dx = ev.pos().x() - self.vb.drag_start_pos.x()
+                    dy = ev.pos().y() - self.vb.drag_start_pos.y()
+                    seuil = 2
+                    if abs(dx) >= seuil or abs(dy) >= seuil:
+                        self.L2_deg = self.L2_deg_start - dx*2
+                        self.B2_deg = self.B2_deg_start + dy*1
+                        self.syno_update_disk_and_grid(self.L2_deg, self.B2_deg, (380,800))
+                        if self.L2_deg < 0 :
+                            self.L2_deg=360+self.L2_deg
+                        self.ui.syno_L2_txt.setText(f"{self.L2_deg:.0f}")
+                        self.ui.syno_B2_txt.setText(f"{self.B2_deg:.0f}")
+                        self.vb.drag_start_pos = ev.pos()
+                        self.L2_deg_start = self.L2_deg
+                        self.B2_deg_start = self.B2_deg
+                    ev.accept()
+            else:
+                original_drag(ev, axis)
+ 
+        self.vb.mouseDragEvent = custom_drag
+        
+        self.vb.sphere_mode = False
+        self.flag_plani_done = False
+        self.syno_flag_all = True
+        self.file_list_syno = []
+        
+        self.ui.syno_plot_view.setBackground((20, 20, 20))
+        
+
 
         #--------------------------------------------------------------------
         # init param application
@@ -542,6 +639,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.show()
         self.ui.dock_console.show()
         self.on_tab_changed(self.current_tab)
+        QApplication.restoreOverrideCursor()
        
     
     def closeEvent (self,event):
@@ -671,7 +769,7 @@ class main_wnd_UI(QMainWindow) :
             if self.ui.stack_image_view.imageItem.sceneBoundingRect().contains(pos) :
                 mouse_point= self.ui.stack_image_view.view.mapSceneToView(pos)
                 x,y =int(mouse_point.x()), int(mouse_point.y())
-                
+
                 if 0 <= x < self.ui.stack_image_view.image.shape[0] and 0<= y < self.ui.stack_image_view.image.shape[1] :
                     # pour affichage premiere ligne n'est pas 0 mais 1
                     msg="x : "+str(x+1)+' , y : '+str(y+1)
@@ -683,6 +781,49 @@ class main_wnd_UI(QMainWindow) :
                 else:
                     #print ("mouse out of bounds")
                     self.ui.statusbar.clearMessage() 
+                    
+        if app_tab=='Synoptic' :
+            try :
+                if self.flag_plani_done :
+                    
+                    if self.syno_img_item.sceneBoundingRect().contains(pos) :
+                        mouse_point= self.ui.syno_plot_view.getViewBox().mapSceneToView(pos)
+                        x,y =int(mouse_point.x()), int(mouse_point.y())
+                        
+                        if self.syno_L0 <= x < self.syno_L0+360 and -90<= y < 90 :
+                            # pour affichage premiere ligne n'est pas 0 mais 1
+                            msg="Long : "+str(x)+'° , Lat : '+str(y)+'°'
+                            self.ui.statusbar.showMessage(msg)
+                        else:
+                            self.ui.statusbar.clearMessage() 
+            except :
+                pass
+        
+        if app_tab=='Grille' or app_tab=="Grid":
+            try:
+                if self.ui.grid_ar_checkbox.isEnabled() :
+                    if self.ui.grid_view.imageItem.sceneBoundingRect().contains(pos) :
+                        mouse_point= self.ui.grid_view.view.mapSceneToView(pos)
+                        x,y =int(mouse_point.x()), int(mouse_point.y())
+                        
+                        y = self.ui.grid_view.image.shape[1]-y
+                        
+                        if 0 <= x < self.ui.grid_view.image.shape[0] and 0<= y < self.ui.grid_view.image.shape[1] :
+
+                            lat, long = xy_to_carrington(x,y, self.geom_dict['cx'], self.geom_dict['cy'], self.geom_dict['sr'],
+                                             self.geom_dict['B0'], self.geom_dict['L0'], self.geom_dict['P'])
+                            #print(lat,long)
+                            if lat!=None and long!=None :
+                                msg="xy "+str(x)+' '+str(y)+"  Long : "+str(int(long))+'° , Lat : '+str(int(lat))+'°'
+                                self.ui.statusbar.showMessage(msg)
+                            else :
+                                self.ui.statusbar.clearMessage()    
+                        else:
+                            self.ui.statusbar.clearMessage()     
+            except:
+                pass
+            
+            
         if app_tab=='Mosa' :
             if self.ui.mosa_image_view.imageItem.sceneBoundingRect().contains(pos) :
                 mouse_point= self.ui.mosa_image_view.view.mapSceneToView(pos)
@@ -793,6 +934,26 @@ class main_wnd_UI(QMainWindow) :
             else:
                 #print ("mouse out of bounds")
                 self.ui.statusbar.clearMessage() 
+                
+        if app_tab=='Synoptic' :
+            
+            try :
+                if self.flag_plani_done :  
+                    
+                    pos = self.ui.syno_plot_view.getViewBox().mapToScene(ev.pos())
+                    
+                    if self.syno_img_item.sceneBoundingRect().contains(pos) :
+                        mouse_point= self.ui.syno_plot_view.getViewBox().mapSceneToView(pos)
+                        x,y =int(mouse_point.x()), int(mouse_point.y())
+                        
+                        if self.syno_L0 <= x < self.syno_L0+360 and -90<= y < 90 :
+                            msg="Long : "+str(x)+'° , Lat : '+str(y)+'°'
+                            self.ui.statusbar.showMessage(msg)
+                            self.ui.syno_Lregion_txt.setText(str(x))
+                        else:
+                            self.ui.statusbar.clearMessage() 
+            except :
+                pass
     
     #--------------------------------------------------------------------------
     # tab viewer
@@ -2199,35 +2360,34 @@ class main_wnd_UI(QMainWindow) :
     #--------------------------------------------------------------------------
     
     def anim_img_list_open_clicked (self):
-        anim_file_dialog=QFileDialog()
+        #anim_file_dialog=QFileDialog()
         self.ui.anim_stacked_widget.setCurrentIndex(0)
         file_list=[]
         self.ui.anim_image_view.clear()
         
-        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
         filtres_mapping = {
-            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
-            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
-            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
-            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
-            "*.png":       self.tr("Tous les fichiers png (*.png)")
+        "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+        "*_cont.png":   self.tr("Fichiers cont png (*_cont.png)"),
+        "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+        "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+        "*_free.png":   self.tr("Fichiers free png (*_free.png)"),
+        "*.png":        self.tr("Tous les fichiers png (*.png)"),
+
         }
-    
-        # Définition de la liste complète des filtres
-        filtres = ";;".join([
-            self.tr("Tous les fichiers png (*.png)"),
-            self.tr("Fichiers disk png (*_disk.png)"),
-            self.tr("Fichiers protus png (*_protus.png)"),
-            self.tr("Fichiers clahe png (*_clahe.png)"),
-            self.tr("Fichiers free (*_free.png)")
-        ])
-    
-        # Choix du filtre par défaut
-        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
-    
         
-        file_list = anim_file_dialog.getOpenFileNames(self, self.tr("Selectionner Images"), self.working_dir, filtres,filtre_defaut)
-        self.pattern = file_list[1]
+        filtres_qt = ";;".join(filtres_mapping.values())
+        
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, filtres_mapping["*.png"])       
+        
+        file_list = QFileDialog.getOpenFileNames(self, "Selectionner image ", self.working_dir, filtres_qt ,filtre_defaut)
+        texte_vers_pattern = {v: k for k, v in filtres_mapping.items()}
+        self.pattern = texte_vers_pattern.get(file_list[1],"*.png")
+        
+        if self.pattern not in filtres_mapping:
+            self.pattern = "*.png"
+            
+    
         if len(file_list[0]) != 0 :
             self.ui.anim_list.clear()
             self.file_list_anim=file_list[0]
@@ -2242,6 +2402,7 @@ class main_wnd_UI(QMainWindow) :
             self.ui.anim_list.setCurrentRow(0)
             self.ui.anim_list.item(0).setSelected(True)
             self.current_index=0
+            self.file_list_bak=self.file_list_anim
 
     def anim_add_img (self):
         file_add_list=[]
@@ -2442,39 +2603,42 @@ class main_wnd_UI(QMainWindow) :
             nb_trame_totale=int(self.ui.anim_nb_total_text.text())
         
         if self.ui.anim_interp_checkbox.isChecked() :
-            # recupere heure dans chaque fichier _log.txt
-            # si fichier clahe alors on remonte repertoire d'un cran
-            if self.file_list_bak[0].find("_clahe.") != -1 :
-                log_dir = os.path.dirname(self.working_dir)
-            else :
-                log_dir = self.working_dir
-            try :                    
-                files_log = [os.path.basename(get_baseline(os.path.splitext(x)[0])+"_log.txt") for x in self.file_list_bak]
-                #jd,_=[get_time_from_log(log_dir+os.sep+x) for x in files_log]
-                result = [get_time_from_log(log_dir+os.sep+x) for x in files_log]
-                jd = [t[0] for t in result]
-                jd=[int(j) for j in jd]
-                time_seq=np.argsort(jd)
-                if np.all(time_seq==0) :
-                    raise Exception
-                # on recre une sequence de t et de nom de fichier ordonnné
-                new_t=[jd[x] for x in time_seq]
-                self.file_list_anim=[self.file_list_anim[j] for j in time_seq]
-                #print(t, time_seq, new_t, self.file_list_anim)
-                self.d_sec=[x-new_t[0] for x in new_t]
-                #print(self.d_sec)
-                #s_d_sec=[str(d) for d in d_sec]
-                if new_t[0]==new_t[1]:
-                    print(self.tr('erreur de datation'), jd)
-                else:
-                    #time_stamp=', '.join(s_d_sec)
-                    self.duration= self.d_sec[-1]
-            except :
-                self.flag_nologtxt=True
-                print (self.tr("Pas de fichier _log.txt"))
-                self.ui.anim_interp_checkbox.setChecked(False)
-                self.d_sec=np.arange(0,(10*nb_img_acquise), 10)
-        
+            try :
+                # recupere heure dans chaque fichier _log.txt
+                # si fichier clahe alors on remonte repertoire d'un cran
+                if self.file_list_bak[0].find("_clahe.") != -1 :
+                    log_dir = os.path.dirname(self.working_dir)
+                else :
+                    log_dir = self.working_dir
+                try :                    
+                    files_log = [os.path.basename(get_baseline(os.path.splitext(x)[0])+"_log.txt") for x in self.file_list_bak]
+                    #jd,_=[get_time_from_log(log_dir+os.sep+x) for x in files_log]
+                    result = [get_time_from_log(log_dir+os.sep+x) for x in files_log]
+                    jd = [t[0] for t in result]
+                    jd=[int(j) for j in jd]
+                    time_seq=np.argsort(jd)
+                    if np.all(time_seq==0) :
+                        raise Exception
+                    # on recre une sequence de t et de nom de fichier ordonnné
+                    new_t=[jd[x] for x in time_seq]
+                    self.file_list_anim=[self.file_list_anim[j] for j in time_seq]
+                    #print(t, time_seq, new_t, self.file_list_anim)
+                    self.d_sec=[x-new_t[0] for x in new_t]
+                    #print(self.d_sec)
+                    #s_d_sec=[str(d) for d in d_sec]
+                    if new_t[0]==new_t[1]:
+                        print(self.tr('erreur de datation'), jd)
+                    else:
+                        #time_stamp=', '.join(s_d_sec)
+                        self.duration= self.d_sec[-1]
+                except :
+                    self.flag_nologtxt=True
+                    print (self.tr("Pas de fichier _log.txt"))
+                    self.ui.anim_interp_checkbox.setChecked(False)
+                    self.d_sec=np.arange(0,(10*nb_img_acquise), 10)
+            except : 
+                print("Erreur interne : no files bak")
+                return
         else :
             self.d_sec=np.arange(0,(10*nb_img_acquise), 10)
             
@@ -2632,18 +2796,12 @@ class main_wnd_UI(QMainWindow) :
                     print("create video")
                     self.anim_file_name=self.working_dir+os.sep+basefich+'.mp4' 
                     self.anim_file_name_gif=self.working_dir+os.sep+basefich+'.gif' 
-                    #filename=basefich+'.avi'  python conversion float en int
-                    #img=Image.open(frame[0])
-                    #h=img.height
-                    #w=img.width
+
                     height, width=(int(h*reduction),int(w*reduction))
                     img=[]
-                    #image_files=[]
-    
-                    #print(height, width)
-                    
-                    fourcc = cv2.VideoWriter_fourcc(*'avc1')
-                    #fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
+                    fourcc = cv2.VideoWriter_fourcc(*'avc1') # version qui marche
+                    #fourcc = cv2.VideoWriter_fourcc(*"mp4v") marche pas, images noires
 
                     out = cv2.VideoWriter(self.anim_file_name, fourcc,self.frps, (width, height),0)
                     #out = cv2.VideoWriter(filename, fourcc,frps, (width, height),1)
@@ -2653,20 +2811,34 @@ class main_wnd_UI(QMainWindow) :
                         fname=frame[k]
                         img=cv2.imread(str(Path(self.anim_dir))+os.sep+fname)
                         img2=cv2.resize(img,(width, height),interpolation = cv2.INTER_AREA)
+                        
+                        # le gif
                         self.gif_images.append(Image.fromarray(img2))
+                        # le mp4
                         out.write(img2)
-                        
-                        
+                       
             
                     out.release()
-                    print("Animation : ",self.anim_file_name)
+                    print("Animation : "+ self.anim_file_name)
+                    
+                    # creation du gif
                     im=self.gif_images[0]
                     im.save(self.anim_file_name_gif, save_all=True, append_images=self.gif_images[1:], duration=int(1/self.frps)*1000, loop=0)
+                    
+                    # affiche dans le stacked widget
                     self.ui.anim_stacked_widget.setCurrentIndex(1)
                     self.mediaPlayer=QMediaPlayer(self)
                     self.mediaPlayer.setVideoOutput(self.anim_video_player)
                     self.mediaPlayer.setSource(QUrl.fromLocalFile(self.anim_file_name))
                     self.mediaPlayer.play()
+                    
+                    """
+                    # affiche gif dans le miniviewer
+                    self.mygif_view = movie_wnd(self.anim_file_name_gif)
+                    self.mygif_view.set_file_name(self.anim_file_name_gif)
+                    self.mygif_view.show()
+                    """
+                    
             except :
                 if out.isOpened() :
                     out.release()
@@ -2799,20 +2971,24 @@ class main_wnd_UI(QMainWindow) :
 
         file_polar = QFileDialog.getOpenFileNames(self, "Selectionner fichier polarisation", self.working_dir, "Fichiers fits (*.fits)")
         file_polar=file_polar[0]
-        self.working_dir= self.get_dirpath(file_polar[0])
-        if self.polar== 'droite' :
-            self.file_polar_droite=[]
-            self.ui.mag_droite_list.clear()
-            for f in file_polar :
-                self.file_polar_droite.append(self.short_name(f))
-            self.ui.mag_droite_list.addItems(self.file_polar_droite)
-            
-        if self.polar == 'gauche' :
-            self.file_polar_gauche=[]
-            self.ui.mag_gauche_list.clear()
-            for f in file_polar :
-                self.file_polar_gauche.append(self.short_name(f))
-            self.ui.mag_gauche_list.addItems(self.file_polar_gauche)
+        if file_polar[0] != '' :
+            try :
+                self.working_dir= self.get_dirpath(file_polar[0])
+                if self.polar== 'droite' :
+                    self.file_polar_droite=[]
+                    self.ui.mag_droite_list.clear()
+                    for f in file_polar :
+                        self.file_polar_droite.append(self.short_name(f))
+                    self.ui.mag_droite_list.addItems(self.file_polar_droite)
+                    
+                if self.polar == 'gauche' :
+                    self.file_polar_gauche=[]
+                    self.ui.mag_gauche_list.clear()
+                    for f in file_polar :
+                        self.file_polar_gauche.append(self.short_name(f))
+                    self.ui.mag_gauche_list.addItems(self.file_polar_gauche)
+            except:
+                pass
             
     
     def mag_go(self) :
@@ -3243,37 +3419,32 @@ class main_wnd_UI(QMainWindow) :
     
     def proc_open (self) :
         self.file_proc =''
-        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
-        filtres_mapping = {
-            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
-            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
-            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
-            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
-            "*_recon*.fits": self.tr("Fichiers recon fits (*_recon*.fits)"),
-            "*_free.fits":  self.tr("Fichiers free fits (*_free.fits)"),
-            "*_cont*.fits": self.tr("Fichiers cont fits (*_cont*.fits)"),
-            "*.fits":      self.tr("Fichiers fits (*.fits)"),
-            "*.png":       self.tr("Tous les fichiers png (*.png)")
-        }
-    
-        # Définition de la liste complète des filtres
-        filtres = ";;".join([
-            self.tr("Tous les fichiers png (*.png)"),
-            self.tr("Fichiers disk png (*_disk.png)"),
-            self.tr("Fichiers protus png (*_protus.png)"),
-            self.tr("Fichiers clahe png (*_clahe.png)"),
-            self.tr("Fichiers free (*_free.png)"),
-            self.tr("Fichiers recon fits (*_recon*.fits)"),
-            self.tr("Fichiers free fits (*_free.fits)"),
-            self.tr("Fichiers cont fits (*_cont*.fits)"),
-            self.tr("Fichiers fits (*.fits)")
-        ])
-    
-        # Choix du filtre par défaut
-        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
         
-        file_proc = QFileDialog.getOpenFileName(self, "Selectionner image ", self.working_dir, filtres ,filtre_defaut)
-        self.pattern = file_proc[1]
+        filtres_mapping = {
+        "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+        "*_cont.png":   self.tr("Fichiers cont png (*_cont.png)"),
+        "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+        "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+        "*_free.png":   self.tr("Fichiers free png (*_free.png)"),
+        "*.png":        self.tr("Tous les fichiers png (*.png)"),
+    
+        "*_recon.fits": self.tr("Fichiers recon FITS (*_recon.fits)"),
+        "*_free.fits":  self.tr("Fichiers free FITS (*_free.fits)"),
+        "*.fits":       self.tr("Fichiers FITS (*.fits)")
+        }
+        
+        filtres_qt = ";;".join(filtres_mapping.values())
+        
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, filtres_mapping["*.png"])       
+        
+        file_proc = QFileDialog.getOpenFileName(self, "Selectionner image ", self.working_dir, filtres_qt ,filtre_defaut)
+        texte_vers_pattern = {v: k for k, v in filtres_mapping.items()}
+        self.pattern = texte_vers_pattern.get(file_proc[1],"*.png")
+        
+        if self.pattern not in filtres_mapping:
+            self.pattern = "*.png"
+            
         if file_proc[0] != '' :
             self.file_proc=file_proc[0]
             self.proc_read()
@@ -3363,7 +3534,7 @@ class main_wnd_UI(QMainWindow) :
                         if self.file_proc_log != '' :
                             cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_proc_log)
                         else :
-                            print(self.tr("Pas de fichier log... analyse image"))
+                            #print(self.tr("Pas de fichier log... analyse image"))
                             cx,cy,sr,ay1,ay2,ax1,ax2 = mo.analyse_geom(img_proc)
                         
                         diam=int(int(sr)*2)
@@ -3511,6 +3682,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.proc_view.setImage(belle_image,autoRange=False)
         
         
+        
     def proc_undo (self) :
         img_proc=self.original_data
         img_proc = np.fliplr(np.rot90(img_proc, 3))
@@ -3646,16 +3818,27 @@ class main_wnd_UI(QMainWindow) :
             try :
                 self.file_proc_log= self.get_log_file(self.file_proc)
                 
-                _,dateutc = get_time_from_log(self.file_proc_log)
-                dateobs=dateutc[0]+'T'+dateutc[1]
+                if self.file_proc_log != '' :
+                    _,dateutc = get_time_from_log(self.file_proc_log)
+                    dateobs=dateutc[0]+'T'+dateutc[1]
+                else :
+                    # code special en dur fichier christian sunscan
+                    fs=self.short_name(self.file_proc)
+                    #extrait date du nom
+                    parts = fs.split("_")
+
+                    # la partie datetime est toujours la 1ère non vide
+                    datetime_part = parts[1]
+                    dt = datetime.datetime.strptime(datetime_part, "%Y-%m-%dT%H-%M-%S")
+                    dateobs = dt.strftime("%Y-%m-%dT%H:%M:%S.00")
             except :
-                print('Erreur fichier _log txt')
+                print('Erreur date')
         else :
             dateobs= self.header_proc['DATE-OBS']
             
         try :
-            print(dateobs)
-            (angP,B0, L0, Carr) = angle_P_B0(dateobs)
+            #print(dateobs)
+            angP,B0, L0, Carr = angle_P_B0(dateobs)
         except :
             print(self.tr('Erreur calcul angle P'))
             
@@ -3690,38 +3873,31 @@ class main_wnd_UI(QMainWindow) :
         except :
             pass
         
-        # Dictionnaire : pattern -> filtre complet (avec traduction possible)
         filtres_mapping = {
-            "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
-            "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
-            "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
-            "*_free.png":   self.tr("Fichiers free (*_free.png)"),
-            "*_recon*.fits": self.tr("Fichiers recon fits (*_recon*.fits)"),
-            "*_free.fits":  self.tr("Fichiers free fits (*_free.fits)"),
-            "*_cont*.fits": self.tr("Fichiers cont fits (*_cont*.fits)"),
-            "*.fits":      self.tr("Fichiers fits (*.fits)"),
-            "*.png":       self.tr("Tous les fichiers png (*.png)")
+        "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+        "*_cont.png":   self.tr("Fichiers cont png (*_cont.png)"),
+        "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+        "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+        "*_free.png":   self.tr("Fichiers free png (*_free.png)"),
+        "*.png":        self.tr("Tous les fichiers png (*.png)"),
+    
+        "*_recon.fits": self.tr("Fichiers recon FITS (*_recon.fits)"),
+        "*_free.fits":  self.tr("Fichiers free FITS (*_free.fits)"),
+        "*.fits":       self.tr("Fichiers FITS (*.fits)")
         }
-    
-        # Définition de la liste complète des filtres
-        filtres = ";;".join([
-            self.tr("Tous les fichiers png (*.png)"),
-            self.tr("Fichiers disk png (*_disk.png)"),
-            self.tr("Fichiers protus png (*_protus.png)"),
-            self.tr("Fichiers clahe png (*_clahe.png)"),
-            self.tr("Fichiers free (*_free.png)"),
-            self.tr("Fichiers recon fits (*_recon*.fits)"),
-            self.tr("Fichiers free fits (*_free.fits)"),
-            self.tr("Fichiers cont fits (*_cont*.fits)"),
-            self.tr("Fichiers fits (*.fits)")
-        ])
-    
+        
+        filtres_qt = ";;".join(filtres_mapping.values())
+        
         # Choix du filtre par défaut
-        filtre_defaut = filtres_mapping.get(self.pattern, self.tr("Tous les fichiers png (*.png)"))
-        #print(self.pattern, filtre_defaut)
-        file_grid = QFileDialog.getOpenFileName(self, self.tr("Selectionner image "), self.working_dir, filtres, filtre_defaut)
+        filtre_defaut = filtres_mapping.get(self.pattern, filtres_mapping["*.png"])
+        
+        
+        file_grid = QFileDialog.getOpenFileName(self, self.tr("Selectionner image "), self.working_dir, filtres_qt, filtre_defaut)
+        
         if file_grid != ('',''):
             try :
+                texte_vers_pattern = {v: k for k, v in filtres_mapping.items()}
+                self.pattern = texte_vers_pattern.get(file_grid[1],"*.png")
                 self.file_grid=file_grid[0]
                 self.grid_read()
                 self.file_proc=self.file_grid
@@ -3733,6 +3909,14 @@ class main_wnd_UI(QMainWindow) :
             self.filigranes =[]
             self.grid_dist_cancel()
             self.ui.grid_view.clear()
+            #self.ui.grid_ar_checkbox.setEnabled(False)
+            #self.ui.grid_ar_checkbox.setEnabled(False)
+            
+            # on efface tous les graphiques ajoutés
+            for item in self.ui.grid_view.getView().allChildren():
+                if isinstance(item, (pg.TextItem, pg.ArrowItem, QGraphicsRectItem)):
+                    self.ui.grid_view.getView().removeItem(item)
+            
             self.working_dir= self.get_dirpath(self.file_grid)
             self.ui.grid_filename_lbl.setText(self.file_grid)
             # recupere extension
@@ -3758,9 +3942,25 @@ class main_wnd_UI(QMainWindow) :
                     self.hdr=hdr
                 else :
                     self.file_grid_log= self.get_log_file(self.file_grid)
-                    _,dateutc = get_time_from_log(self.file_grid_log)
-                    mydate=dateutc[0]+'T'+dateutc[1]
-                self.ui.grid_date_text.setText(mydate[:-8])
+                    if self.file_grid_log != '' :
+                        _,dateutc = get_time_from_log(self.file_grid_log)
+                        mydate=dateutc[0]+'T'+dateutc[1]
+                    else :
+                        # hardcode in filename christian
+                        # cas particulier ou la date est dans le nom codage en dur
+                        fs=self.short_name(self.file_grid)
+                        #extrait date du nom
+                        parts = fs.split("_")
+
+                        # la partie datetime est toujours la 1ère non vide
+                        datetime_part = parts[1]
+                        dt = datetime.datetime.strptime(datetime_part, "%Y-%m-%dT%H-%M-%S")
+                        mydate = dt.strftime("%Y-%m-%dT%H:%M:%S.00")
+                        
+                        
+                self.ui.grid_date_text.setText(mydate)
+                
+                
                 angP, paramB0, longL0, RotCarr = angle_P_B0(mydate)
                 #self.ui.grid_angP_text.setText(angP)
             except :
@@ -3770,7 +3970,7 @@ class main_wnd_UI(QMainWindow) :
             self.img_grid_orig=np.copy(img_grid)
             
     def grid_plot (self) :
-        
+            
             if self.img_grid.any() :
                 mydate = self.ui.grid_date_text.text()
                 # il faudra faire un test de format
@@ -3781,9 +3981,10 @@ class main_wnd_UI(QMainWindow) :
                 
                 color_index = self.ui.grid_color_combo.currentIndex()
                 text_color_list = [(250, 250, 0,0x80), (250, 250, 250,0x80), (250, 250, 250,0x80)]
-                text_color= text_color_list[color_index]
+                text_color= text_color_list[color_index]               
                 pen_color_list = [pg.mkPen(QtGui.QColor(250,250,0,0x60),width=2), pg.mkPen(QtGui.QColor(0,0,0,0x60),width=2), pg.mkPen(QtGui.QColor(250,250,250,0x60),width=2)]
                 mypen = pen_color_list [color_index]
+                self.grid_text_color = mypen.color().name()
                 
                 if self.plotitem :
                     for p in self.plotitem :
@@ -3798,22 +3999,35 @@ class main_wnd_UI(QMainWindow) :
                         yc = self.hdr['CENTER_Y']
                         radius = self.hdr['SOLAR_R']
                     else :
+                        """
+                        # TODO : utiliser self.get_geom
                         cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
+                        """
+                        cx,cy,sr = self.get_geom(self.file_grid, self.img_grid)
                         xc=int(cx)
                         yc=int(cy)
                         radius = int(sr)
                     
+                    
+                    print(cx,cy, sr)
                     # inversion axe Y
                     yc=ih-yc
                     r=radius
                     
                     P_,B0_,L0_, Rot_Carr=angle_P_B0 (mydate)
                     P_disp=P_
+                    #P_=-float(P_)
+                    
                     
                     if self.ui.grid_Pdone_checkbox.isChecked() :
                         P_=0
                         
-                    P_rad=math.radians(float(P_))
+                    # on remplit structure pour coordonnées helio de carrington
+                    self.geom_dict={'dateobs': mydate,'P':float(P_), 'B0':float(B0_), 'L0':float(L0_),'Carr':float(Rot_Carr),'cx':xc, 'cy':yc, 'sr':radius}
+                    #self.ui.grid_ar_checkbox.setEnabled(True)
+                    
+                    
+                    P_rad=math.radians(-float(P_))
                     B0_rad=math.radians(float(B0_))
                     
                     # draw data coin gauche
@@ -3985,9 +4199,41 @@ class main_wnd_UI(QMainWindow) :
                                 #plot_text.setPos(lx2[0]-50*math.cos(bb+P_rad),ly2[0]+20*math.sin(bb+P_rad))
                                 plot_text.setPos(lx2[0]+50*math.cos(bb+P_rad),ly2[0]-50*math.sin(bb+P_rad))
                                 plot_text.setFont(font)
+                                
+                    if self.ui.grid_ar_checkbox.isChecked() :
+                        self.grid_AR()
                 except :
                     print(self.tr("Mots clefs manquants dans entête fits"))
-                 
+    
+    def grid_AR (self):
+        
+        #TODO : effacer les zones si on deselecte
+        #TODO : afficher les zones sans pour autant afficher la grille...
+        
+        if self.ui.grid_ar_checkbox.isChecked():
+            # on doit afficher les zones actives de la date
+            if self.geom_dict :
+                rect_size = int(self.geom_dict['sr']/10)
+                mydate = self.geom_dict['dateobs']
+                best_srs, best_day, best_delta = get_nearest_srs_from_fits_date(mydate)
+                entries= parse_srs(best_srs)
+                for ar in entries :
+                    ar_num = ar['AR']
+                    lat_deg= ar['Lat']
+                    lon_deg=ar['Lon']                                   
+                    x,y = carrington_to_xy(lat_deg, lon_deg, self.geom_dict['cx'], self.geom_dict['cy'], self.geom_dict['sr'],
+                                            self.geom_dict['B0'], self.geom_dict['L0'], self.geom_dict['P'])
+                    
+                    if x != None and y != None and lon_deg >20 and lon_deg<350:
+                        y = self.ui.grid_view.image.shape[1]- y
+                        annotate_ar(self.ui.grid_view.getView(), float(x), float(y), ar_num, rect_size=rect_size, rect_width=0.5,text_color=self.grid_text_color)
+                        print(f"AR {ar_num}  lat={lat_deg:.1f}°  lonCarr={lon_deg:.1f}°")
+        else :
+            # on efface tous les graphiques ajoutés
+            for item in self.ui.grid_view.getView().allChildren():
+                if isinstance(item, (pg.TextItem, pg.ArrowItem, QGraphicsRectItem)):
+                    self.ui.grid_view.getView().removeItem(item)
+    
     def grid_gong(self):
         # cela n'a du sens que si on a deja une image _recon
         fits_dateobs = self.ui.grid_date_text.text()
@@ -4097,6 +4343,7 @@ class main_wnd_UI(QMainWindow) :
             diam= int(self.hdr['SOLAR_R']*2)
         else :
             try :
+                # TODO : et si on remplacait par self.get_geom
                 cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
                 centreX=int(cx)
                 centreY=int(cy)
@@ -4177,7 +4424,7 @@ class main_wnd_UI(QMainWindow) :
                 if self.file_grid_log !='' :
                     cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
                 else :
-                    print(self.tr("Pas de fichier log... analyse image"))
+                    #print(self.tr("Pas de fichier log... analyse image"))
                     cx,cy,sr,ay1,ay2,ax1,ax2 = mo.analyse_geom(self.img_grid)
                 
                 xc=int(cx)
@@ -4395,9 +4642,948 @@ class main_wnd_UI(QMainWindow) :
             self.terre_list.clear()
         except :
             pass
+
+
+
+    def syno_img_open_clicked (self):
+        # choix de ne traiter que les images png noir et blanc > ben non on ajoute le fits !
+        self.syno_dir=self.working_dir
+        file_list=[]
+        self.file_list_syno=[]
+        
+        filtres_mapping = {
+        "*_disk.png":   self.tr("Fichiers disk png (*_disk.png)"),
+        "*_cont.png":   self.tr("Fichiers cont png (*_cont.png)"),
+        "*_protus.png": self.tr("Fichiers protus png (*_protus.png)"),
+        "*_clahe.png":  self.tr("Fichiers clahe png (*_clahe.png)"),
+        "*_free.png":   self.tr("Fichiers free png (*_free.png)"),
+        "*.png":        self.tr("Tous les fichiers png (*.png)"),
+    
+        "*_recon.fits": self.tr("Fichiers recon FITS (*_recon.fits)"),
+        "*_free.fits":  self.tr("Fichiers free FITS (*_free.fits)"),
+        "*.fits":       self.tr("Fichiers FITS (*.fits)")
+        }
+        
+        filtres_qt = ";;".join(filtres_mapping.values())
+        
+        # Choix du filtre par défaut
+        filtre_defaut = filtres_mapping.get(self.pattern, filtres_mapping["*.png"])
+        #print(self.pattern, filtre_defaut)
+        
+        #self.ui.syno_image_view.clear()
+        file_list = QFileDialog.getOpenFileNames(self,self.tr( "Selectionner Images"), self.syno_dir, filtres_qt, filtre_defaut)
+        texte_vers_pattern = {v: k for k, v in filtres_mapping.items()}
+        self.pattern = texte_vers_pattern.get(file_list[1],"*.png")
+        if self.pattern not in filtres_mapping:
+            self.pattern = "*.png"
+        
+        if file_list[0] !='' :
+            try :
+                #print (self.pattern)
+                self.flag_plani_done = False
+                self.flag_syno_anim = False
+                self.ui.syno_anim_slider.setEnabled(False)
+                self.ui.syno_make_anim_btn.setEnabled(False)
+                self.ui.syno_getAR_btn.setEnabled(False)
+                self.ui.syno_plot_view.clear()
+                self.vb.sphere_mode = False
+                
+                if len(file_list[0]) !=0  :
+                    
+                    #self.ui.syno_list.clear()
+                    self.file_list_syno=file_list[0]
+                    self.ext_syno= self.get_extension (self.file_list_syno[0])
+                    self.working_dir= self.get_dirpath(self.file_list_syno[0])
+                    self.ui.syno_dir_lbl.setText(self.working_dir)
+                    self.load_syno_imagettes ()
+                    file_names=[]
+                    for f in self.file_list_syno :
+                        file_names.append (self.short_name(f))
+                    #self.ui.syno_list.addItems (file_names)
+                    #self.ui.stack_image_view.ui.histogram.hide()
+                    
+                    #self.ui.syno_list.setCurrentRow(0)
+                    #self.ui.syno_list.item(0).setSelected(True)
+            
+                    self.ui.syno_img_list_view.setFocus()
+                    self.ui.syno_img_list_view.setCurrentRow(0)
+            except:
+                pass
+            
+
+    def load_syno_imagettes(self) :
+        galx=100
+        galy=100
+        ext = self.check_extension (self.file_list_syno)
+        flag_error = False
+        my_file_list = self.file_list_syno
+        if ext != '' :
+            try :
+                page = self.ui.tab_main.findChild(QWidget, 'tab_syno')
+                self.ui.syno_img_list_view.clear()
+                #self.ui.img_list_view.setViewMode(QtGui.QListView.IconMode)
+                self.ui.tab_main.setCurrentWidget(page)
+                
+                for file_name in my_file_list:
+                    flag_error = False
+                    pro_item=QListWidgetItem()
+                    
+                    # recupère data et transforme en Qpixmap suivant png, jpg ou fits
+                    if ext=='png' or ext=='jpg':
+                        # 
+                        pix = QtGui.QPixmap(file_name)
+                        if pix.toImage().isGrayscale() :
+                            self.pixmap = pix.scaled(galx, galy, Qt.AspectRatioMode.KeepAspectRatio,
+                                                 Qt.TransformationMode.SmoothTransformation)
+                        else :
+                            print("Error " +file_name + self.tr(" : Image couleur"))
+                            flag_error= True
+                            # il faut retirer l'image couleur...
+                            self.file_list.remove(file_name)
+                    
+                    if ext == 'fits' :
+                        # code correct 
+                        data, header= self.read_fits_image(file_name)
+                        data = data.astype(np.int16)
+                        h, w = data.shape
+                        q_img = QtGui.QImage(np.ascontiguousarray(data), w, h, QtGui.QImage.Format_Grayscale16)
+                        pix = QtGui.QPixmap.fromImage(q_img)
+                        self.pixmap = pix.scaled(galx, galy, Qt.AspectRatioMode.KeepAspectRatio,
+                                                 Qt.TransformationMode.SmoothTransformation)
+                        
+                    if not flag_error :    
+                        pro_icon=QtGui.QIcon()
+                        pro_icon.addPixmap(self.pixmap)
+                        pro_item.setIcon(pro_icon)
+                        pro_item.setText(self.short_name(file_name))
+                        self.ui.syno_img_list_view.addItem(pro_item)
+                        
+                
+                    
+            except:
+                pass    
+    
+    def syno_prep (self):
+        self.IMAGE_INFO = []
+        self.IMAGE_INFO_FULL =[]
+        self.images=[]
+        image_info = []
+        
+        if len(self.file_list_syno) == 0 :
+            return
+        
+        if self.syno_flag_all == False :
+            index = self.ui.syno_img_list_view.currentIndex()
+            try :
+                file_selected = self.working_dir+os.sep+index.data()
+            except :
+                return
+            myfile_list_syno = [file_selected]
+        else :
+            myfile_list_syno = self.file_list_syno
+            
+                
+        for i,f in enumerate(myfile_list_syno) :
+            #self.ui.stack_progress_bar.setValue(i)
+            
+            if self.ext_syno == 'png' :
+                im=cv2.imread(str(Path(f)), cv2.IMREAD_UNCHANGED) 
+                self.images.append(im)
+                self.file_syno_log= self.get_log_file(f)
+                
+                if self.file_syno_log != '' :
+
+                    _,dateutc = get_time_from_log(self.file_syno_log)
+                    mydate=dateutc[0]+'T'+dateutc[1]
+                else :
+                    try :
+                        # cas particulier ou la date est dans le nom codage en dur
+                        fs=self.short_name(f)
+                        parts = fs.split("_")
+    
+                        # la partie datetime est toujours la 1ère non vide
+                        datetime_part = parts[1]
+                    
+                        dt = datetime.datetime.strptime(datetime_part, "%Y-%m-%dT%H-%M-%S")
+                    
+                        mydate = dt.strftime("%Y-%m-%dT%H:%M:%S.00")
+                        
+                        #mydate='20'+fs[5:7]+'-'+ fs[3:5]+'-'+fs[1:3]+"T"+fs[8:10]+":"+ fs[10:12]+":00.000"               
+                    except :
+                        self.L0_mid = -1 # pour detecter erreur de date
+                        return                    
+                        
+                angP, paramB0, longL0, RotCarr = angle_P_B0(mydate)
+                
+                # fichier log ou utilise l'image
+                #cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_syno_log)
+                cx,cy,sr = self.get_geom(f, im)
+               
+            
+            elif self.ext_syno == 'fits':
+                im, hdr = self.read_fits_image(f)
+                self.images.append(im)
+                mydate =hdr['DATE-OBS']
+                cx = hdr['CENTER_X']
+                cy = hdr['CENTER_Y']
+                sr = hdr['SOLAR_R']
+                angP, paramB0, longL0, RotCarr = angle_P_B0(mydate)               
+            
+            else:
+                raise ValueError("Format non supporté")
+            
+            fname = self.short_name(f)
+            
+            image_info.append([fname, mydate, float(longL0), float(paramB0), int(sr), int(cx), int(cy)])
+            
+
+        image_info.sort(key=lambda row: datetime.datetime.fromisoformat(row[1]))
+        #print('')
+        recouv = 75
+        recouv1 =recouv
+
+        # Calcul et ajoute valeurs recouv1 et recouv2 pour chaque image
+        for i in range(len(image_info)) :
+            current_date = datetime.datetime.fromisoformat(image_info[i][1])
+            if i == len(image_info)-1 :               
+                recouv2 = recouv1
+                recouv1 = recouv              
+            elif i== 0 :
+                next_date = datetime.datetime.fromisoformat(image_info[i+1][1])
+                diff_jours = (next_date - current_date).total_seconds() / 86400.0
+                recouv2 = recouv
+                recouv1=round(((diff_jours*15)/2),2)
+            else:
+                next_date = datetime.datetime.fromisoformat(image_info[i+1][1])
+                diff_jours = (next_date - current_date).total_seconds() / 86400.0
+                # 15 degrés par jour, et on réparti entre les 2 images
+                recouv2= recouv1
+                recouv1=round(((diff_jours*15)/2),2)
+                                
+            
+            image_info[i].extend([recouv1, recouv2, True])
+            #print(image_info[i][0]+' : '+ image_info[i][1][:-4] +'  '+ str(recouv1)+' '+str(recouv2))
+            #print(image_info[i][0]+' : '+ image_info[i][1][:-4] +'  '+ str(image_info[i][2]))
+        
+        self.IMAGE_INFO = [row[:1] + row[2:] for row in image_info ]
+        self.IMAGE_INFO_FULL = image_info
+        
+        # prendre le L0 en fonction du L0 de la premiere image -80 >> NON
+        L0_list = [int(x[1]) for x in self.IMAGE_INFO]
+        #L0_min= np.min(L0_list)
+        #L0=L0_min-80
+        #self.ui.syno_L0_txt.setText(str(L0))
+        # Trouver le L du milieu, le min et le max
+        L_mid = int(np.mean(L0_list))
+        self.L0_max = int(np.max(L0_list))+recouv
+        self.L0_min = int(np.max(L0_list))-recouv
+        self.L0_mid = L_mid
+        
+        self.ui.syno_L2_txt.setText(str(L_mid))
+        
+        """
+        # calcul au cas ou on demande un swing polaire pour la sphère  >> gadget 
+        # amplitude swing 
+        self._A = 40.0
+        self._w = self.L0_max - self.L0_min
+        self._inv_w = 1.0 / self._w
+        self._two_w = 2.0 * self._w
+        
+        # B2_deg0 = valeur centrale de l'oscillation
+        self._B2_center = float(self.ui.syno_B2_txt.text())
+        
+        # phase fixe pour centrer sur L0_mid
+        self._x0 = 0.5  # x=0.5 correspond à B2 = B2_center à L0_mid
+        """
+        
+        return 
+            
+    def syno_img_list_view_sel_changed (self) :
+        self.syno_flag_all = False
+        self.syno_run_carte_clicked()
+        self.syno_flag_all = True
+    
+    def syno_run_carte_clicked(self) :
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        #QApplication.restoreOverrideCursor()
+        
+        if self.file_list_syno :
+            self.syno_prep() 
+            if self.L0_mid == -1 :
+                #QApplication.setOverrideCursor(Qt.WaitCursor)
+                QApplication.restoreOverrideCursor()
+                print("Date error")
+                return
+            
+            save_with_grid = True
+            
+            try :
+                L0 = float(self.ui.syno_L0_txt.text())
+            except:
+                L0=0 
+                print(self.tr("L n'est pas un nombre"))
+            
+            self.syno_W=2160
+            self.syno_H=self.syno_W//2
+          
+            
+            self.plani, self.lon_deg, self.lat_deg = syn.build_planisphere_fast(self.images, self.IMAGE_INFO, self.syno_H, self.syno_W, L0,save_with_grid)
+            plani_rot=np.fliplr(np.rot90(self.plani, 3))
+            
+            plot_widget = self.ui.syno_plot_view  
+            plot_widget.clear()  # vide tout ce qui pourrait rester
+            
+            # Crée l'image à afficher
+            img_item = pg.ImageItem(plani_rot)
+            self.syno_img_item = img_item
+            plot_widget.addItem(img_item)
+            
+            # Dimensions
+            h, w = plani_rot.shape
+            sx = 360 / h
+            sy = 180 / w
+            
+            # --- Transformation ---
+            from PySide6.QtGui import QTransform
+            T = QTransform()
+            T.scale(sx, sy)
+            T.translate(L0 / sx, -90 / sy)
+            img_item.setTransform(T)
+            
+            # Définir les niveaux de l'image (contraste)
+            img_item.setLevels([0, plani_rot.max()])
+            
+            # Ajouter labels et titre
+            plot_widget.setLabel('bottom', 'Longitude (°)')
+            plot_widget.setLabel('left', 'Latitude (°)')
+            plot_widget.setTitle(f"Planisphère solaire (Longitude={L0}°)")
+            
+            # Afficher la grille
+            stepX = 25
+            stepY = 20
+            epaisseur = 0.1
+            color_index = self.ui.syno_color_carte_combo.currentIndex()
+            color_list = ['white','black','yellow', 'blue', 'lime', 'red','cyan','pink', 'orange']
+            color=color_list[color_index]
+            color = QtGui.QColor(color) if isinstance(color, str) else pg.mkColor(color)
+            
+            if self.ui.syno_grid_carte_chk.isChecked() :
+                plot_widget.showGrid(x=False, y=False)
+                # ajouter un cadre blanc 
+                #color = 'white'
+                rect = QGraphicsRectItem(L0, -90, 360,180)
+                rect.setPen(QtGui.QPen(pg.mkColor(color), 0.2))
+                
+                self.grid_items = self.syno_draw_grid_carte (plot_widget, L0, L0+360, -90, 90, 
+                                     stepX, stepY, color, epaisseur)
+            else :
+                plot_widget.showGrid(x=False, y=False)
+                try :
+                    for item in self.grid_items:
+                        plot_widget.removeItem(item)
+                except:
+                    pass
+    
+                self.grid_items = []
+            
+            # Ajuster les limites de la vue sur toute l'image   
+            plot_widget.setLimits(xMin=-180, xMax=360+180, yMin=-180, yMax=+180)
+            plot_widget.setXRange(L0,L0+360)
+            plot_widget.setYRange(-90,90)
+            
+            # Ajoute dans le PlotWidget
+            plot_widget.addItem(rect)
+    
+            
+            plot_widget.setAspectLocked(True)  # garde les pixels carrés
+            
+            self.flag_plani_done = True
+            self.ui.syno_anim_slider.setEnabled(False)
+            self.ui.syno_make_anim_btn.setEnabled(False)
+            self.ui.syno_getAR_btn.setEnabled(True)
+            self.vb.sphere_mode = False
+            self.syno_L0 = L0
+            
+        #QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.restoreOverrideCursor()
+    
+    def syno_run_region_clicked (self):
+        if self.file_list_syno :
+            #extraire pour chaque disque projeté la ROI
+           
+            # setup des parametres d'interface
+            try :
+                Lregion = float(self.ui.syno_Lregion_txt.text())
+            except:
+                print(self.tr("L n'est pas un nombre"))
+                return
+            try :
+                Lregion_largeur = float(self.ui.syno_region_largeur_txt.text())
+            except:
+                print(self.tr("Largeur n'est pas un nombre"))
+                return
+            try :
+                L0 = float(self.ui.syno_L0_txt.text())
+            except:
+                L0=0 
+                print(self.tr("L n'est pas un nombre"))
+                
+                
+            # on utilise pas le plani, on fait L0=0
+            
+            self.syno_W=2160
+            self.syno_H=self.syno_W//2        
+            save_with_grid = True
+            # Dimensions
+            
+            sx = 360 / self.syno_W
+            sy = 180 / self.syno_H
+            region_image = []
+            mylist_syno = self.file_list_syno
+            flag_erreur = False
+            dateR_list = []
+            
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            #QApplication.restoreOverrideCursor()
+            
+            # construit le tableau des plani pour chaque file de self.file_list_syno
+            for i in range(len(mylist_syno)) :
+                self.file_list_syno =  [mylist_syno[i]]
+                self.syno_prep() 
+                if self.L0_mid == -1 :
+                    #QApplication.setOverrideCursor(Qt.WaitCursor)
+                    QApplication.restoreOverrideCursor()
+                    return
+                one_image=self.images
+                one_IMAGE_INFO = self.IMAGE_INFO
+                self.plani, self.lon_deg, self.lat_deg = syn.build_planisphere_fast(one_image, one_IMAGE_INFO, self.syno_H, self.syno_W, L0,save_with_grid)
+                
+                Lcentre =self.IMAGE_INFO[0][1] - L0
+                
+                Lmin = int((Lregion-L0-Lregion_largeur)/sx)
+                Lmax= int((Lregion-L0 + Lregion_largeur)/sx)
+                Lcentre_max=int((Lcentre+80)/sx)
+                Lcentre_min = int((Lcentre-80)/sx)
+                dlat75 = int((90-75) /sy)
+                
+                if Lmax <= Lcentre_max and Lmin > Lcentre_min:
+                        roi_img= self.plani[dlat75:-dlat75,Lmin:Lmax]
+                        roi_img[:,-1]=0
+                        block_width = roi_img.shape[1]
+                        dateR_list.append (self.IMAGE_INFO_FULL[0][1])
+                        if i == 0 or flag_erreur:
+                            region_image = np.copy(roi_img)
+                            ref_mean = np.mean(region_image[int(self.syno_H *0.4):- int(self.syno_H *0.4),:])
+                            flag_erreur= False
+                        else :
+                            roi_mean = np.mean(roi_img[int(self.syno_H *0.4):- int(self.syno_H *0.4),:])
+                            roi_img *=  (ref_mean / roi_mean if roi_mean != 0 else 1.0)
+                            region_image = np.hstack((region_image, roi_img))
+                                                    
+    
+                else :
+                    flag_erreur = True
+                    #print(i,Lcentre_min, Lcentre_max)
+            
+            
+            plani_rot=np.fliplr(np.rot90(region_image, 3))
+            plot_widget = self.ui.syno_plot_view  
+            plot_widget.clear()  # vide tout ce qui pourrait rester
+            
+            # Crée l'image à afficher
+            img_item = pg.ImageItem(plani_rot)
+            self.syno_img_item = img_item
+            plot_widget.addItem(img_item)
+            
+            # recupere couleur de la carte
+            color_index = self.ui.syno_color_carte_combo.currentIndex()
+            color_list = ['white','black','yellow', 'blue', 'lime', 'red','cyan','violet', 'orange']
+            color=color_list[color_index]
+            
+            # ajout des dates de date_list                
+            y_pos = plani_rot.shape[1]-(10/sy)  # au-dessus de l'image
+            
+            # Ajout des dates au-dessus de chaque bloc
+            for i, date_text in enumerate(dateR_list):
+                date_text=date_text.split('T')[0]
+                x_pos = i * block_width + block_width / 2
+                txt = pg.TextItem(text=str(date_text), anchor=(0.5, 1.0))
+                txt.setColor(color)  # texte blanc
+                plot_widget.addItem(txt)
+                txt.setPos(x_pos, y_pos)
+            
+            plot_widget.setLimits(xMin=None, xMax=None, yMin=None, yMax=None)
+            plot_widget.getAxis('left').setVisible(False)
+            plot_widget.getAxis('bottom').setVisible(False)
+            plot_widget.getAxis('right').setVisible(False)
+            plot_widget.getAxis('top').setVisible(False)
+            plot_widget.setTitle(f"Séquence date-longitude (Longitude={Lregion}°)")
+            plot_widget.autoRange()
+            
+            self.file_list_syno = mylist_syno
+            
+            self.flag_plani_done = False
+            self.ui.syno_getAR_btn.setEnabled(False)
+            
+            #QApplication.setOverrideCursor(Qt.WaitCursor)
+            QApplication.restoreOverrideCursor()
+                         
+        
+        
+    def syno_run_sphere_clicked(self) :
+        if self.file_list_syno :
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            #QApplication.restoreOverrideCursor()
+            
+            if not self.flag_plani_done  :
+                self.syno_prep()
+                if self.L0_mid == -1 :
+                    #QApplication.setOverrideCursor(Qt.WaitCursor)
+                    QApplication.restoreOverrideCursor()
+                    return
+                save_with_grid = True
+                self.syno_W=2160
+                self.syno_H=self.syno_W//2
+                try :
+                    L0 = float(self.ui.syno_L0_txt.text())
+                except:
+                    L0=0 
+                    print(self.tr("L carte n'est pas un nombre"))
+                   
+                self.plani, self.lon_deg, self.lat_deg = syn.build_planisphere_fast(self.images, self.IMAGE_INFO, self.syno_H, self.syno_W, L0,save_with_grid)
+                self.flag_plani_done = True
+            try :
+                L2_deg = float(self.ui.syno_L2_txt.text())
+            except:
+                L2_deg = 100
+                print(self.tr("L sphere n'est pas un nombre"))           
+            try :
+                B2_deg = float(self.ui.syno_B2_txt.text())
+            except:
+                B2_deg = 0 
+                print(self.tr("B sphere n'est pas un nombre"))
+                
+           
+            R2 = 380
+            imax = 800
+            jmax = 800
+            cx=imax//2 
+            cy=jmax//2
+            
+            """
+            #  swing polaire >> marche mais trop gadget 
+            if self.ui.syno_polar_swing_chk.isChecked() :
+                
+                # calcul de la phase normalisée
+                x = ((L2_deg - self.L0_min) * self._inv_w + self._x0) % 2.0
+            
+                # calcul B2_deg centré sur _B2_center
+                B2_deg = self._B2_center + self._A * (2.0 * (1 - abs(x - 1)) - 1)
+            
+                # affichage
+                self.ui.syno_B2_txt.setText(f"{B2_deg:.1f}")
+            else :
+                # B2_deg0 = valeur centrale de l'oscillation remise à la valeur du texte
+                self._B2_center = float(self.ui.syno_B2_txt.text()) 
+            """    
+            sphere = syn.disk_from_planisphere_fast(self.plani, self.syno_H, self.syno_W, self.lon_deg, self.lat_deg,
+                              L2_deg, B2_deg,
+                              R2, imax, jmax,
+                              output_file=None,
+                              draw_grid_flag=True)
+            
+            # test colorisation
+            couleur=self.ui.syno_colorimg_combo.currentText()
+            if ( couleur !='Aucune' and couleur !='None') :
+                sphere = Colorise_Image(couleur, sphere)
+            
+            
+            sphere_rot=np.fliplr(np.rot90(sphere, 3))
+            plot_widget = self.ui.syno_plot_view  
+            plot_widget.clear()  # vide tout ce qui pourrait rester
+            plot_widget.setLimits(xMin=None, xMax=None, yMin=None, yMax=None)
+            plot_widget.getAxis('left').setVisible(False)
+            plot_widget.getAxis('bottom').setVisible(False)
+            plot_widget.getAxis('right').setVisible(False)
+            plot_widget.getAxis('top').setVisible(False)
+            plot_widget.showGrid(x=False, y=False)
+            plot_widget.setTitle(f"Planisphère solaire (Longitude={self.ui.syno_L2_txt.text()}°)")
+            
+            # Crée l'image à afficher
+            img_item = pg.ImageItem(sphere_rot)
+            plot_widget.addItem(img_item)
+            plot_widget.autoRange()   
+            plot_widget.setAspectLocked(True)  # garde les pixels carrés
+            if self.ui.syno_grid_sphere_chk.isChecked() :
+                color_index = self.ui.syno_color_combo.currentIndex()
+                color_list = ['yellow', 'blue', 'black', 'white', 'lime', 'red','cyan','violet', 'orange']
+                self.syno_draw_coord_grid_on_disk (cx, cy, R2, L2_deg, B2_deg, color_list[color_index])
+            #time.sleep(5)
+            
+            #QApplication.setOverrideCursor(Qt.WaitCursor)
+            QApplication.restoreOverrideCursor()
+            
+            # active et positionne le slider
+            self.ui.syno_anim_slider.setEnabled(True)
+            self.ui.syno_make_anim_btn.setEnabled(True)
+            self.ui.syno_anim_slider.setValue(L2_deg)
+            self.ui.syno_getAR_btn.setEnabled(False)
+            self.vb.sphere_mode = True
+    
+    def syno_update_disk_and_grid (self,L2_deg,B2_deg, geom=(170,380)) :  # was 236,512     
+        if self.file_list_syno :
+            if not self.flag_plani_done  :
+                self.syno_prep()
+                if self.L0_mid == -1 :
+                    return
+                save_with_grid = True
+                self.syno_W=1080
+                self.syno_H=self.syno_W//2
+                
+                try :
+                    L0 = float(self.ui.syno_L0_txt.text())
+                except:
+                    L0=0 
+                    print(self.tr("L carte n'est pas un nombre"))
+                 
+                self.plani, self.lon_deg, self.lat_deg = syn.build_planisphere_fast(self.images, self.IMAGE_INFO, self.syno_H, self.syno_W, L0,save_with_grid)
+                self.flag_plani_done = True
+            """
+            R2 = 236
+            imax = 512
+            jmax = 512
+            """
+            
+            R2 = geom[0]
+            imax = geom[1]
+            jmax = imax
+                      
+            cx=imax//2 
+            cy=jmax//2
+            
+                           
+            sphere = syn.disk_from_planisphere_fast(self.plani, self.syno_H, self.syno_W, self.lon_deg, self.lat_deg,
+                              L2_deg, B2_deg,
+                              R2, imax, jmax,
+                              output_file=None,
+                              draw_grid_flag=True)
+            couleur=self.ui.syno_colorimg_combo.currentText()
+            if ( couleur !='Aucune' and couleur !='None') :
+                sphere = Colorise_Image(couleur, sphere)
+                
+            sphere_rot=np.fliplr(np.rot90(sphere, 3))
+            plot_widget = self.ui.syno_plot_view  
+            plot_widget.clear()  # vide tout ce qui pourrait rester
+            plot_widget.setLimits(xMin=None, xMax=None, yMin=None, yMax=None)
+            plot_widget.getAxis('left').setVisible(False)
+            plot_widget.getAxis('bottom').setVisible(False)
+            plot_widget.getAxis('right').setVisible(False)
+            plot_widget.getAxis('top').setVisible(False)
+            plot_widget.showGrid(x=False, y=False)
+            if L2_deg <0 :
+                L2_deg = L2_deg+360
+            plot_widget.setTitle(f"Planisphère solaire (Longitude={str(L2_deg)}°)")
+            
+            # Crée l'image à afficher
+            img_item = pg.ImageItem(sphere_rot)
+            plot_widget.addItem(img_item)
+            plot_widget.autoRange()   
+            plot_widget.setAspectLocked(True)  # garde les pixels carrés
+            if self.ui.syno_grid_sphere_chk.isChecked() :
+                color_index = self.ui.syno_color_combo.currentIndex()
+                color_list = ['yellow', 'blue', 'black', 'white', 'lime', 'red','cyan','violet', 'orange']
+                self.syno_draw_coord_grid_on_disk (cx, cy, R2, L2_deg, B2_deg, color_list[color_index])
+            
+    
+    def syno_reset_sphere (self):
+        self.L2_deg = self.L0_mid
+        self.B2_deg = 0 
+        self.ui.syno_L2_txt.setText (f"{self.L2_deg:.0f}")
+        self.ui.syno_B2_txt.setText ("0")
+        #self.syno_run_sphere_clicked()
+    
+    def syno_anim_slider_change(self) :
+        L2_deg = float(self.ui.syno_anim_slider.value())
+        self.ui.syno_L2_txt.setText(str(int(L2_deg)))
+        self.syno_run_sphere_clicked()
+         
+        
+    def syno_make_anim (self) :
+        
+        # paramètres de l'animation
+        # vitesse sympa est de 2 degrés pour 0.1 s
+        
+        # pas de l'angle en degrés
+        step= -4
+        # durée d'une image en secondes (100ms = 10 image par seconde)
+        duration = (abs(step)//2) * 0.1 # secondes
+
+
+        # couverture angulaire de l'animation 
+        couv =self.ui.syno_couv_combo.currentText()
+        ang_anim = int(couv)
+        demi_ang_anim = ang_anim // 2
+        
+        # demarre au debut de la séquence
+        #L0_list = np.arange(self.L0_min+demi_ang_anim,self.L0_min-demi_ang_anim,step)
+        
+        # demarre à longitude du milieu de la séquence
+        L0_list = np.arange(self.L0_mid+demi_ang_anim,self.L0_mid -demi_ang_anim,step)
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        #QApplication.restoreOverrideCursor()
+        
+        try :
+            B2_deg = float(self.ui.syno_B2_txt.text())
+        except:
+            B2_deg = 0 
+            print(self.tr("B sphere n'est pas un nombre"))
+        
+        # ViewBox et zone data à capturer
+        zg = self.ui.syno_plot_view.getPlotItem().getViewBox()
+        
+        x0, x1 = 0, 380
+        y0, y1 = 0, 440
+        
+        # Optionnel : verrouiller le ViewBox pour une zone fixe
+        zg.setLimits(xMin=x0, xMax=x1, yMin=y0, yMax=y1)
+        zg.setRange(xRange=(x0, x1), yRange=(y0, y1), padding=0)
+        
+        # Tableau des images pour le GIF
+        trames = []
+        
+        for L2_deg in L0_list:
+            # Mise à jour graphique
+            self.syno_update_disk_and_grid(L2_deg, B2_deg)
+        
+            # Forcer le rafraîchissement
+            QApplication.processEvents()
+        
+            # Recalcul des coins en coordonnées scène à chaque trame
+            p0 = zg.mapViewToScene(QPointF(x0, y0))
+            p1 = zg.mapViewToScene(QPointF(x1, y1))
+            rect_scene = QRectF(p0, p1).normalized()
+        
+            # Pixmap de la taille exacte de la zone
+            pixmap = QtGui.QPixmap(int(rect_scene.width()), int(rect_scene.height()))
+            #pixmap.fill(Qt.transparent)  # Si besoin de transparence
+            pixmap.fill(QtGui.QColor(0, 0, 0))  
+        
+            # Rendu de la scène dans le pixmap
+            painter = QtGui.QPainter(pixmap)
+            zg.scene().render(painter, QRectF(pixmap.rect()), rect_scene)
+            painter.end()
+        
+            # Conversion en numpy
+            pixmap.setDevicePixelRatio(1.0)  # Important sous macOS
+            qimg = pixmap.toImage().convertToFormat(QtGui.QImage.Format_RGBA8888)
+            w, h = qimg.width(), qimg.height()
+            ptr = qimg.bits()
+            arr = np.frombuffer(ptr, np.uint8).reshape(h, w, 4)
+            trame = arr.copy()
+        
+            trames.append(trame)
+        
+        QApplication.restoreOverrideCursor()
+        
+        # creation du gif
+        base_nomgif="syno_anim_B"+ self.ui.syno_B2_txt.text()
+        file_name_gif = nomfich_incremental(self.working_dir,base_nomgif, ".gif")
+        
+        frames_pil = [Image.fromarray(t, "RGBA") for t in trames]
+        frames_pil[0].save(file_name_gif, save_all=True,append_images=frames_pil[1:], 
+            format="GIF",duration=duration, loop=0)
+
+        print(self.tr("Creation du gif : " + str(file_name_gif)))
+        
+        fps = 1/duration  # images par seconde
+        height, width = trames[0].shape[:2]
+        file_name_mp4 = nomfich_incremental(self.working_dir,base_nomgif, ".mp4")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(file_name_mp4, fourcc, fps, (width, height))
+
+        for frame in trames:
+            frame_bgr = cv2.cvtColor(frame[:, :, :3], cv2.COLOR_RGB2BGR)  # OpenCV attend BGR
+            out.write(frame_bgr)
+        
+        out.release()
+        print(self.tr("Creation du mp4: " + str(file_name_mp4)))
+        
+        # affichage dans fenetre
+        self.gif_wnd = movie_wnd(str(file_name_gif))
+        self.gif_wnd.show()
+
+    
+    
+    def syno_getAR (self):
+        if self.flag_plani_done :
+            
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            
+            # recuperer toutes les dates de la sequence
+            fits_dates = [x[1] for x in self.IMAGE_INFO_FULL ]
+            regions_dict={}
+            L_max= self.IMAGE_INFO_FULL[0][2]+80
+            L_min=self.IMAGE_INFO_FULL[-1][2]-80
+            #print(int(L_min), int(L_max))
+            
+            for fits_date in fits_dates :
+                srs_txt, srs_day, delta = get_nearest_srs_from_fits_date(fits_date)
+                print("SRS trouvé :", srs_day.strftime("%Y-%m-%d"))
+                #print("Écart en jours :", delta)
+
+                regions = parse_srs(srs_txt)
+                for ar in regions :
+                    ar_num = ar['AR']
+                    #lat= ar['lat']
+                    #long=ar['lon']
+                    regions_dict[ar_num]=ar
+        
+        QApplication.restoreOverrideCursor()
+        
+        color_index = self.ui.syno_color_carte_combo.currentIndex()
+        color_list = ['white','black','yellow', 'blue', 'lime', 'red','cyan','violet', 'orange']
+        color=color_list[color_index]
+        
+        for ar in regions_dict :
+            ar_num =regions_dict[ar]['AR']
+            lat=regions_dict[ar]['Lat']
+            lon=regions_dict[ar]['Lon']
+            print(f"AR {ar_num}  lat={lat:.1f}°  lonCarr={lon:.1f}°")
+            if lon > L_min + 5 and lon < L_max - 20 :
+                annotate_ar(self.ui.syno_plot_view, lon, lat, ar_num, text_color=color)
+                
     
     
     
+    def syno_draw_grid_carte (self,plot_widget, xmin, xmax, ymin, ymax, 
+                         dx, dy, color, width):
+
+        c = QtGui.QColor(color)
+        c.setAlpha(120)   # ajoute la transparence
+        pen = QtGui.QPen(c)
+        pen.setWidthF(width)
+
+    
+        grid_items = []
+
+        # Verticales
+        x = xmin
+        while x <= xmax:
+            item = QGraphicsLineItem(x, ymin, x, ymax)
+            item.setPen(pen)
+            item.setZValue(20)
+            plot_widget.addItem(item)
+            grid_items.append(item)
+            x += dx
+    
+        # Horizontales
+        y = ymin
+        while y <= ymax:
+            item = QGraphicsLineItem(xmin, y, xmax, y)
+            item.setPen(pen)
+            item.setZValue(20)
+            plot_widget.addItem(item)
+            grid_items.append(item)
+            y += dy
+    
+        return grid_items
+            
+    def syno_draw_coord_grid_on_disk(self,xc, yc, R, L2_deg, B2_deg, color, step=10):
+        Lc = np.deg2rad(L2_deg)
+        Bc = np.deg2rad(B2_deg)
+        lats = np.arange(-90, 91, step)
+        lons = np.arange(0, 360, step)
+        color = QtGui.QColor(color) if isinstance(color, str) else pg.mkColor(color)
+
+        def plot_visible(x, y, visible_mask, color):
+            if np.any(visible_mask):
+                idx = np.where(~visible_mask)[0]
+                segments = np.split(np.arange(len(x)), idx)
+                for seg in segments:
+                    if len(seg) > 1:
+                        c = QtGui.QColor(color)   # ou QColor(0,0,255)
+                        c.setAlpha(0x60)           # 0..255 ou 0x00..0xFF
+                        mypen = pg.mkPen(c, width=1.2)
+                        mycircle = pg.PlotCurveItem(x[seg]+xc,y[seg]+yc, pen=mypen)
+                        self.plotitem.append(mycircle)
+                        self.ui.syno_plot_view.addItem(mycircle)
+                        #ax.plot(x[seg]+xc, y[seg]+yc, color=color, linewidth=0.5)
+
+        for lat_deg in lats:
+            lat = np.deg2rad(lat_deg)
+            phi = np.linspace(0, 2*np.pi, 400)
+            cos_c = np.cos(lat)
+            sin_c = np.sin(lat)
+            cos_Bc = np.cos(Bc)
+            sin_Bc = np.sin(Bc)
+            z = sin_c * sin_Bc + cos_c * cos_Bc * np.cos(phi)
+            visible = z >= 0
+            x = R * cos_c * np.sin(phi)
+            y = R * (sin_c * cos_Bc - cos_c * sin_Bc * np.cos(phi))
+            plot_visible(x, y, visible, color)
+
+        for lon_deg in lons:
+            lon = np.deg2rad(lon_deg)
+            lat_vals = np.linspace(-np.pi/2, np.pi/2, 400)
+            sin_lat = np.sin(lat_vals)
+            cos_lat = np.cos(lat_vals)
+            z = sin_lat * sin_Bc + cos_lat * cos_Bc * np.cos(lon-Lc)
+            visible = z >= 0
+            x = R * cos_lat * np.sin(lon - Lc)
+            y = R * (sin_lat * cos_Bc - cos_lat * sin_Bc * np.cos(lon-Lc))
+            plot_visible(x, y, visible, color)
+    
+    
+    def syno_exportas (self) :
+        file_name,_=QFileDialog.getSaveFileName(self, self.tr("Sauver fichier png"), self.working_dir, self.tr("Fichiers png (*.png);;Tous les fichiers (*)"))
+        if file_name :
+            scale = 2
+            plotwidget= self.ui.syno_plot_view
+            # grab du widget complet (taille réelle)
+            pixmap = plotwidget.grab()
+        
+            # scale le pixmap pour haute résolution
+            if scale != 1:
+                pixmap = pixmap.scaled(
+                    pixmap.width() * scale,
+                    pixmap.height() * scale,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+        
+            pixmap.save(file_name)
+            
+    def syno_saveas (self) :
+        file_name,_=QFileDialog.getSaveFileName(self, self.tr("Sauver fichier png"), self.working_dir, self.tr("Fichiers png (*.png);;Tous les fichiers (*)"))
+        if file_name :
+            myimage = None
+            plot_item = self.ui.syno_plot_view.getPlotItem()
+            for item in plot_item.items:
+                if isinstance(item, pg.ImageItem):
+                    myimage = item.image       # tableau numpy
+                    break
+                
+            if myimage is None:
+                pass
+                #raise ValueError("Aucun ImageItem trouvé dans le PlotWidget")
+        
+            # Normalisation sur [0, 65535]
+            min_val = np.nanmin(myimage)
+            max_val = np.nanmax(myimage)
+            if max_val == min_val:
+                img_uint16 = np.zeros_like(myimage, dtype=np.uint16)
+            else:
+                img_norm = (myimage - min_val) / (max_val - min_val)
+                img_uint16 = (img_norm * 65535).astype(np.uint16)
+        
+            # Correction orientation : transpose pour éviter le 90°
+            img_uint16 = img_uint16.T  # transpose
+            img_uint16 = np.flipud(img_uint16)  # si besoin pour inverser verticalement
+        
+            cv2.imwrite(file_name, img_uint16)
+    
+        
     #--------------------------------------------------------------------------
     # fonctions utilitaires
     #--------------------------------------------------------------------------
@@ -4537,6 +5723,38 @@ class main_wnd_UI(QMainWindow) :
                 radius=0
         print("radius : ", radius)
         return radius
+    
+    def get_geom(self,filename, img) :
+        ext=self.get_extension(filename)
+        if ext=="fits" :
+            img,hdr=self.read_fits_image(filename)
+            try :
+                sr=hdr["SOLAR_R"]
+                cx=hdr["CENTER_X"]
+                cy=hdr["CENTER_Y"]
+            except :
+                print("Erreur entete fits")
+                sr=0 
+        if ext=="png" :
+            filename_short = self.short_name(filename)
+            if filename_short.find('sunscan')!= -1 :
+                filename_short=filename_short.replace('sunscan', '_scan')
+            try :
+                file_log= self.get_log_file(filename)
+                if file_log != '' :
+                    cx,cy,sr,ay1,ay2,ax1,ax2 = mo.decode_log(file_log)
+                else :
+                    #print(self.tr("Pas de fichier log... analyse image"))
+                    cx,cy,sr,ay1,ay2,ax1,ax2 = mo.analyse_geom(img)
+                
+            except :
+                print("Erreur geom "+ self.short_name(filename))
+                sr=0 
+                cx=0
+                cy =0
+        #print("radius : ", radius)
+        return cx,cy,sr
+    
 
     def get_log_file (self, file_proc):
         baseline = os.path.basename(get_baseline(os.path.splitext(file_proc)[0]))
@@ -4554,13 +5772,12 @@ class main_wnd_UI(QMainWindow) :
             # on teste encore
                 if not os.path.exists(file_proc_log):
                     # on ne remonte pas d'un cran cette fois, ce n'est pas un clahe
-                    print(self.tr("fichier log non trouvé"))
+                    #print(self.tr("fichier log non trouvé"))
                     file_proc_log=''
           
         
         return file_proc_log
-        
-        
+
         
 # ----------------------------------------------------------------------------
 # class new window to display image floating
@@ -4794,6 +6011,91 @@ class gong_wnd(QDialog) :
         self.ui.show()
         
 
+# ----------------------------------------------------------------------------
+# class movie  fenetre affichage zone label pour gif
+#-----------------------------------------------------------------------------
+
+
+class movie_wnd(QDialog):
+
+    
+    def __init__(self, file_name_gif):
+        super().__init__()
+        
+        # Chargement du fichier UI
+        loader = QUiLoader()
+        ui_file_name = resource_path('movie.ui')
+        ui_file = QFile(ui_file_name)
+        if not ui_file.open(QIODevice.ReadOnly):
+            print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
+            sys.exit(-1)
+        self.ui = loader.load(ui_file)
+        ui_file.close()
+
+        self.ui.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.file_name_gif = file_name_gif
+        self.movie = None  # QMovie initialement None
+
+        # Boutons
+        self.ui.movie_replay_btn.clicked.connect(self.movie_replay)
+        self.ui.movie_close_btn.clicked.connect(self.movie_close)
+
+        self.ui.show()
+
+    def _create_movie(self, target_width):
+        """ Crée un QMovie correctement détaché de tout ancien movie """
+        # Détache l'ancien movie si existant
+        if self.movie is not None:
+            self.movie.stop()
+            self.ui.movie_lbl.setMovie(None)
+            del self.movie
+            self.movie = None
+
+        # Crée le nouveau movie
+        self.movie = QtGui.QMovie(self.file_name_gif)
+        self.ui.movie_lbl.setMovie(self.movie)
+        self.ui.movie_lbl.setAlignment(Qt.AlignCenter)
+
+        self.movie.jumpToFrame(0)
+        gif_size = self.movie.currentImage().size()
+        if gif_size.isEmpty():
+            return
+
+        scale_factor = target_width / gif_size.width()
+        target_height = int(gif_size.height() * scale_factor)
+
+        self.movie.setScaledSize(QSize(target_width, target_height))
+        self.ui.movie_lbl.setFixedSize(target_width, target_height)
+        self.movie.setCacheMode(QtGui.QMovie.CacheAll)
+        self.movie.start()
+
+    def show(self):
+        self._create_movie(target_width=400)
+
+    def movie_replay(self):
+        self._create_movie(target_width=400)
+
+    def movie_close(self):
+           
+        if self.movie:
+            self.movie.stop()
+            self.movie.setCacheMode(QtGui.QMovie.CacheNone)
+            self.ui.movie_lbl.setMovie(None)
+            self.movie.deleteLater()
+            self.movie = None
+
+        QApplication.processEvents()  # libération réelle
+        
+        # Ferme le QDialog et supprime le widget pour libérer le fichier
+        self.ui.close()
+        self.deleteLater()
+
+       
+
+    def set_file_name(self, fn):
+        self.file_name_gif = fn
+        
+
 
 
 
@@ -4863,12 +6165,117 @@ class Log(object):
 
     def flush(self):
         self.out.flush()
-    
+
+        
+        
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 # main App Qt  
 #-----------------------------------------------------------------------------  
-#-----------------------------------------------------------------------------  
+#----------------------------------------------------------------------------- 
+
+def nomfich_incremental(dossier, base, ext):
+    dossier = Path(dossier)
+    i = 1
+    while True:
+        f = dossier / f"{base}-{i}{ext}"
+        if not f.exists():
+            return f
+        i += 1
+
+def xy_to_carrington(x, y, xc, yc, R, B0_deg, L0_deg, P_deg):
+    B0 = np.radians(B0_deg)
+    L0 = np.radians(L0_deg)
+    P  = np.radians(P_deg)
+
+    X = (x - xc) / R
+    Y = (y - yc) / R 
+
+    Xp =  X * np.cos(P) + Y * np.sin(P)
+    Yp = -X * np.sin(P) + Y * np.cos(P)
+
+    rho2 = Xp**2 + Yp**2
+    if rho2 > 1.0:
+        return None, None
+
+    Z = np.sqrt(1 - rho2)
+
+    lat = np.arcsin(Yp * np.cos(B0) + Z * np.sin(B0))
+    lon = np.arctan2(Xp, Z * np.cos(B0) - Yp * np.sin(B0))
+    lon_carr = L0 + lon
+    lon_carr = np.mod(lon_carr, 2*np.pi)
+
+    return np.degrees(lat), np.degrees(lon_carr)
+
+def carrington_to_xy(lat_deg, lon_carr_deg, xc, yc, R, B0_deg, L0_deg, P_deg):
+    """
+    Convertit latitude/longitude héliographique de Carrington vers coordonnées image (x, y).
+
+    Paramètres B0, L0, P en degrés.
+    """
+    # Conversion en radians
+    B0 = np.radians(B0_deg)
+    L0 = np.radians(L0_deg)
+    P  = np.radians(P_deg)
+    lat = np.radians(lat_deg)
+    lon_carr = np.radians(lon_carr_deg)
+
+    # Longitude relative au méridien central
+    lon = lon_carr - L0
+
+    # Coordonnées sphériques normalisées
+    cos_lat = np.cos(lat)
+    sin_lat = np.sin(lat)
+    cos_lon = np.cos(lon)
+    sin_lon = np.sin(lon)
+
+    # Coordonnées sur le disque (hémisphère visible)
+    Xp = sin_lon * cos_lat
+    Yp = sin_lat * np.cos(B0) - cos_lat * cos_lon * np.sin(B0)
+    Z  = sin_lat * np.sin(B0) + cos_lat * cos_lon * np.cos(B0)
+
+    # Vérification si le point est visible (devant le limbe)
+    if Z < 0:
+        return None, None  # derrière le Soleil
+
+    # Rotation inverse de l'angle P
+    X =  Xp * np.cos(P) - Yp * np.sin(P)
+    Y =  Xp * np.sin(P) + Yp * np.cos(P)
+
+    # Passage aux coordonnées image
+    x = xc + R * X
+    y = yc + R * Y
+
+    return x, y
+
+def annotate_ar(pw, lon, lat, ar_num, rect_size=10, rect_width=0.2, arrow_color="yellow", rect_color="red", text_color="white"):
+    """
+    Ajoute un rectangle + flèche + label AR sur un PlotWidget pyqtgraph.
+    
+    pw       : PlotWidget
+    lon, lat : coordonnées Carrington / lat
+    ar_num   : numéro AR (str)
+    rect_size: taille du rectangle
+    arrow_color : couleur de la flèche
+    rect_color  : couleur du rectangle
+    text_color  : couleur du label
+    """
+    lon = int(lon)
+    lat= int(lat)
+    # Rectangle
+    rect = QGraphicsRectItem(lon-rect_size/2, lat-rect_size/2, rect_size, rect_size)
+    rect.setPen(QtGui.QPen(QtGui.QColor(rect_color), rect_width))
+    pw.addItem(rect)
+
+    # Flèche (direction NW par défaut)
+    arrow = pg.ArrowItem(pos=(lon, lat), angle=-45, headLen=10, tipAngle=30, brush=QtGui.QColor(arrow_color))
+    pw.addItem(arrow)
+
+    # Label AR
+    text = pg.TextItem(text=ar_num, color=text_color, anchor=(0,1))
+    text.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
+    text.setPos(lon + rect_size//2, lat + rect_size//2)
+    pw.addItem(text)
 
 def safe_sum(images):
     # images est une liste de np.ndarray de même taille et type
@@ -4892,6 +6299,53 @@ def safe_sum(images):
 
     return result.astype(dtype)
 
+def polar_image (img) :
+    h,w =img.shape
+    # hypothese image centrée
+    cx = h//2
+    cy = cx
+    max_radius = cx
+
+    polar = cv2.warpPolar(img, dsize=(max_radius,360), center = (cx,cy), maxRadius=max_radius, flags = cv2.WARP_FILL_OUTLIERS+cv2.WARP_POLAR_LINEAR)
+    #plt.imshow(polar)
+    #plt.show()
+    #print(polar.shape)
+  
+    return polar
+
+def cartesian_from_radial_profile(profile, w, center=None, outside_value=1.0):
+    """
+    Génère une image cartésienne w x w à partir d'un profil radial 1D.
+    - profile : array-like, longueur = w//2 + 1 (rayons 0..w//2 inclus)
+    - w : taille de l'image (carrée)
+    - center : (y0, x0), entier; défaut = centre de l'image
+    - outside_value : valeur hors rayon max
+    """
+    profile = np.asarray(profile, dtype=float)
+    radius = w // 2
+
+    # Vérification stricte : pas de rééchantillonnage
+    if len(profile) != radius + 1:
+        raise ValueError(f"Le profil doit avoir exactement {radius+1} valeurs (0..{radius}).")
+
+    # Centre entier
+    if center is None:
+        y0 = w // 2
+        x0 = w // 2
+    else:
+        y0, x0 = center
+
+    # Grille cartésienne
+    yy, xx = np.meshgrid(np.arange(w), np.arange(w), indexing='ij')
+    R = np.sqrt((xx - x0)**2 + (yy - y0)**2)
+
+    # Interpolation directe (sans rééchantillonnage)
+    r_axis = np.arange(radius + 1, dtype=float)
+    img = np.interp(R, r_axis, profile)
+
+    # Fond hors rayon
+    img[R > radius] = outside_value
+    return img
 
 
 def to_float(s: str) -> float:
@@ -5199,9 +6653,15 @@ def Colorise_Image (couleur, frame_contrasted):
     # gestion couleur auto ou sur dropdown database compatibility
     # 'On','H-alpha','Pale','Calcium','Sodium','Magnesium'
     # 'On' active le mode auto de detection de couleur
- 
-    f=frame_contrasted/256
-    f_8=f.astype('uint8')
+    if frame_contrasted.dtype == np.uint16:
+        #f=frame_contrasted/256
+        #f_8=f.astype('uint8')
+        f_8 =np.clip(frame_contrasted / 65535 * 255, 0, 255).round().astype(np.uint8)
+    elif frame_contrasted.dtype == np.float64:
+        f_8 = np.clip(frame_contrasted / 65535 * 255, 0, 255).round().astype(np.uint8)
+        #f_8=f.astype('uint8')
+    else :
+        f_8 = frame_contrasted
     
     #hist = cv2.calcHist([f_8],[0],None,[256],[10,256])
     # separe les 2 pics fond et soleil
@@ -5218,19 +6678,6 @@ def Colorise_Image (couleur, frame_contrasted):
         print('couleur : ',pos_max)
 
     
-    # test ombres >> provoque des applats 
-    ombres=False
-    if ombres :
-        
-        i_low=[]
-        i_hi=[]
-        fr=np.copy(frame_contrasted)
-        i_low=np.array((fr<(pos_max*256))*fr*1.01, dtype='uint16')
-        i_hi=(fr>=pos_max)*fr
-        fr=i_low+i_hi
-        f=fr/256
-        f_8=f.astype('uint8')
-    
     
     if couleur =='on' :  
         if pos_max<200 and pos_max>=98 : #was 70
@@ -5240,18 +6687,6 @@ def Colorise_Image (couleur, frame_contrasted):
         if pos_max>=200 :
             couleur="Pale"
 
-    
-    # test ombres >> provoque des applats 
-    ombres=False
-    if ombres :
-        f8_low=[]
-        f8_hi=[]
-        f8_low=np.array((f_8<pos_max)*f_8*1.05, dtype='uint8')
-        f8_hi=(f_8>=pos_max)*f_8
-        f_8=f8_low+f8_hi
-    
-    
-    #couleur="H-alpha"
     
     if couleur != '' :
         # image couleur en h-alpha
@@ -5826,6 +7261,102 @@ def get_geom_from_log (flog) :
         cx=cy=sr=ax1=ax2=ay1=ay2=0
         
     return cx,cy,sr,ay1,ay2,ax1,ax2
+
+def download_srs_archive(dt):
+    """Télécharge le SRS archivés NCEI/NGDC pour un jour donné."""
+    year = dt.year
+    month = dt.month
+    yyyymmdd = dt.strftime("%Y%m%d")
+    url = f"https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_region_summaries/{year}/{month:02d}/{yyyymmdd}SRS.txt"
+    r = requests.get(url)
+    if r.status_code == 200:
+        return r.text
+    return None
+
+def download_srs_today():
+    """Télécharge le SRS du jour depuis SWPC."""
+    url = "https://services.swpc.noaa.gov/text/srs.txt"
+    r = requests.get(url)
+    if r.status_code == 200:
+        return r.text
+    return None
+
+def get_nearest_srs_from_fits_date(fits_date, search_days=3):
+    dt = datetime.datetime.fromisoformat(fits_date)
+    today = datetime.datetime.utcnow().date()
+
+    # Cas date du jour : prendre le SRS courant
+    if dt.date() == today:
+        txt = download_srs_today()
+        if txt:
+            return txt, dt, 0
+        else:
+            raise FileNotFoundError("SRS du jour non disponible pour le moment.")
+
+    # Sinon : chercher ± search_days dans l’archive
+    best_srs = None
+    best_delta = None
+    best_day = None
+
+    for offset in range(-search_days, search_days + 1):
+        day = dt + datetime.timedelta(days=offset)
+        txt = download_srs_archive(day)
+        if txt:
+            delta = abs(offset)
+            if best_srs is None or delta < best_delta:
+                best_srs = txt
+                best_delta = delta
+                best_day = day
+                if delta == 0:
+                    break
+
+    if best_srs is None:
+        raise FileNotFoundError(f"Aucun SRS trouvé pour ±{search_days} jours autour de {fits_date}")
+
+    return best_srs, best_day, best_delta
+
+def parse_srs(text):
+    """
+    Retourne une liste de tuples (numero_NOAA, latitude_deg, lon_carr_deg).
+    """
+    lines = text.splitlines()
+    entries = []
+    inside = False
+
+    for line in lines:
+        # Début de la partie I
+        if line.startswith("I.  Regions with Sunspots"):
+            inside = True
+            continue
+
+        # Fin de la partie I
+        if inside and (line.startswith("IA.") or line.startswith("II.")):
+            break
+
+        # Ignorer en-têtes
+        if inside and (not line.strip() or line.startswith("Nmbr")):
+            continue
+
+        if inside:
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+
+            num = parts[0]          # numéro NOAA
+            loc = parts[1]          # ex : N15W23
+            lo  = parts[2]          # longitude Carrington
+
+            # Latitude
+            sign = 1 if loc[0] == 'N' else -1
+            lat_deg = sign * float(loc[1:3])
+
+            # Longitude Carrington
+            lon_deg = float(lo)
+
+            #entries.append((num, lat_deg, lon_deg))
+            entries.append({'AR':num, 'Lat':lat_deg, 'Lon':lon_deg})
+
+    return entries
 
     
 def resource_path(relative_path):
