@@ -1209,7 +1209,7 @@
             <property name="maximumSize">
              <size>
               <width>16777215</width>
-              <height>130</height>
+              <height>140</height>
              </size>
             </property>
             <property name="tabKeyNavigation">
@@ -1220,15 +1220,30 @@
             </property>
             <property name="iconSize">
              <size>
-              <width>300</width>
-              <height>200</height>
+              <width>100</width>
+              <height>100</height>
              </size>
+            </property>
+            <property name="textElideMode">
+             <enum>Qt::TextElideMode::ElideNone</enum>
             </property>
             <property name="resizeMode">
              <enum>QListView::ResizeMode::Adjust</enum>
             </property>
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="gridSize">
+             <size>
+              <width>140</width>
+              <height>140</height>
+             </size>
+            </property>
             <property name="viewMode">
              <enum>QListView::ViewMode::IconMode</enum>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
             </property>
             <property name="selectionRectVisible">
              <bool>false</bool>
@@ -3796,7 +3811,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                </size>
               </property>
               <property name="text">
-               <string>Séquence  Region </string>
+               <string>Séquence  Région </string>
               </property>
              </widget>
             </item>
@@ -4354,8 +4369,8 @@ QSlider::handle:horizontal:disabled {
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="buttonGroup_3"/>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_3"/>
  </buttongroups>
 </ui>

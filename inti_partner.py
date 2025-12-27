@@ -136,7 +136,6 @@ Version 1.2 WIP
 
 """
 
-# TODO : syno ajouter et enlever images
 
 
 class main_wnd_UI(QMainWindow) :
@@ -497,6 +496,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.grid_dg_btn.clicked.connect(self.grid_dg)
         self.ui.grid_gong_btn.clicked.connect(self.grid_gong)
         self.ui.grid_saveas_btn.clicked.connect(self.grid_saveas)
+        self.ui.grid_ar_checkbox.stateChanged.connect(self.grid_ar_p_north)
         #self.ui.grid_applyP_btn.clicked.connect(self.grid_rotate)
         self.ui.grid_annuler_btn.clicked.connect(self.grid_annuler)
         self.ui.grid_fili_cancel_btn.clicked.connect(self.grid_fili_cancel)
@@ -527,8 +527,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.syno_anim_slider.valueChanged.connect(self.syno_anim_slider_change)
         self.ui.syno_exportas_btn.clicked.connect(self.syno_exportas)
         self.ui.syno_saveas_btn.clicked.connect(self.syno_saveas)
-        self.ui.syno_reset_btn.clicked.connect(self.syno_reset_sphere)
-        
+        self.ui.syno_reset_btn.clicked.connect(self.syno_reset_sphere)   
         
         self.ui.syno_anim_slider.setEnabled(False)
         self.ui.syno_make_anim_btn.setEnabled(False)
@@ -3944,7 +3943,7 @@ class main_wnd_UI(QMainWindow) :
                     self.file_grid_log= self.get_log_file(self.file_grid)
                     if self.file_grid_log != '' :
                         _,dateutc = get_time_from_log(self.file_grid_log)
-                        mydate=dateutc[0]+'T'+dateutc[1]
+                        mydate=dateutc[0]+'T'+dateutc[1][:8]
                     else :
                         # hardcode in filename christian
                         # cas particulier ou la date est dans le nom codage en dur
@@ -3955,7 +3954,7 @@ class main_wnd_UI(QMainWindow) :
                         # la partie datetime est toujours la 1ère non vide
                         datetime_part = parts[1]
                         dt = datetime.datetime.strptime(datetime_part, "%Y-%m-%dT%H-%M-%S")
-                        mydate = dt.strftime("%Y-%m-%dT%H:%M:%S.00")
+                        mydate = dt.strftime("%Y-%m-%dT%H:%M:%S")
                         
                         
                 self.ui.grid_date_text.setText(mydate)
@@ -3970,7 +3969,11 @@ class main_wnd_UI(QMainWindow) :
             self.img_grid_orig=np.copy(img_grid)
             
     def grid_plot (self) :
-            
+            # on efface tous les graphiques ajoutés
+            for item in self.ui.grid_view.getView().allChildren():
+                if isinstance(item, (pg.TextItem, pg.ArrowItem, QGraphicsRectItem)):
+                    self.ui.grid_view.getView().removeItem(item)
+                    
             if self.img_grid.any() :
                 mydate = self.ui.grid_date_text.text()
                 # il faudra faire un test de format
@@ -3999,17 +4002,14 @@ class main_wnd_UI(QMainWindow) :
                         yc = self.hdr['CENTER_Y']
                         radius = self.hdr['SOLAR_R']
                     else :
-                        """
-                        # TODO : utiliser self.get_geom
-                        cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
-                        """
                         cx,cy,sr = self.get_geom(self.file_grid, self.img_grid)
                         xc=int(cx)
                         yc=int(cy)
                         radius = int(sr)
                     
                     
-                    print(cx,cy, sr)
+                    #print(cx,cy, sr)
+                    
                     # inversion axe Y
                     yc=ih-yc
                     r=radius
@@ -4202,37 +4202,30 @@ class main_wnd_UI(QMainWindow) :
                                 
                     if self.ui.grid_ar_checkbox.isChecked() :
                         self.grid_AR()
+                    
                 except :
                     print(self.tr("Mots clefs manquants dans entête fits"))
     
     def grid_AR (self):
-        
-        #TODO : effacer les zones si on deselecte
-        #TODO : afficher les zones sans pour autant afficher la grille...
-        
-        if self.ui.grid_ar_checkbox.isChecked():
-            # on doit afficher les zones actives de la date
-            if self.geom_dict :
-                rect_size = int(self.geom_dict['sr']/10)
-                mydate = self.geom_dict['dateobs']
-                best_srs, best_day, best_delta = get_nearest_srs_from_fits_date(mydate)
-                entries= parse_srs(best_srs)
-                for ar in entries :
-                    ar_num = ar['AR']
-                    lat_deg= ar['Lat']
-                    lon_deg=ar['Lon']                                   
-                    x,y = carrington_to_xy(lat_deg, lon_deg, self.geom_dict['cx'], self.geom_dict['cy'], self.geom_dict['sr'],
-                                            self.geom_dict['B0'], self.geom_dict['L0'], self.geom_dict['P'])
-                    
-                    if x != None and y != None and lon_deg >20 and lon_deg<350:
-                        y = self.ui.grid_view.image.shape[1]- y
-                        annotate_ar(self.ui.grid_view.getView(), float(x), float(y), ar_num, rect_size=rect_size, rect_width=0.5,text_color=self.grid_text_color)
-                        print(f"AR {ar_num}  lat={lat_deg:.1f}°  lonCarr={lon_deg:.1f}°")
-        else :
-            # on efface tous les graphiques ajoutés
-            for item in self.ui.grid_view.getView().allChildren():
-                if isinstance(item, (pg.TextItem, pg.ArrowItem, QGraphicsRectItem)):
-                    self.ui.grid_view.getView().removeItem(item)
+
+        # on doit afficher les zones actives de la date
+        if self.geom_dict :
+            rect_size = int(self.geom_dict['sr']/10)
+            mydate = self.geom_dict['dateobs']
+            best_srs, best_day, best_delta = get_nearest_srs_from_fits_date(mydate)
+            entries= parse_srs(best_srs)
+            for ar in entries :
+                ar_num = ar['AR']
+                lat_deg= ar['Lat']
+                lon_deg=ar['Lon']                                   
+                x,y = carrington_to_xy(lat_deg, lon_deg, self.geom_dict['cx'], self.geom_dict['cy'], self.geom_dict['sr'],
+                                        self.geom_dict['B0'], self.geom_dict['L0'], self.geom_dict['P'])
+                
+                if x != None and y != None and lon_deg >20 and lon_deg<350:
+                    y = self.ui.grid_view.image.shape[1]- y
+                    annotate_ar(self.ui.grid_view.getView(), float(x), float(y), ar_num, rect_size=rect_size, rect_width=0.5,text_color=self.grid_text_color)
+                    print(f"AR {ar_num}  lat={lat_deg:.1f}°  lonCarr={lon_deg:.1f}°")
+       
     
     def grid_gong(self):
         # cela n'a du sens que si on a deja une image _recon
@@ -4755,7 +4748,11 @@ class main_wnd_UI(QMainWindow) :
                         pro_icon=QtGui.QIcon()
                         pro_icon.addPixmap(self.pixmap)
                         pro_item.setIcon(pro_icon)
-                        pro_item.setText(self.short_name(file_name))
+                        name = self.short_name(file_name)
+                        if len(name) > 15:
+                            name = name[:15] + "\n" + name[15:]
+                        pro_item.setText(name)
+
                         self.ui.syno_img_list_view.addItem(pro_item)
                         
                 
@@ -4775,7 +4772,8 @@ class main_wnd_UI(QMainWindow) :
         if self.syno_flag_all == False :
             index = self.ui.syno_img_list_view.currentIndex()
             try :
-                file_selected = self.working_dir+os.sep+index.data()
+                name = index.data().replace('\n', '')
+                file_selected = self.working_dir+os.sep+name
             except :
                 return
             myfile_list_syno = [file_selected]
@@ -5429,16 +5427,22 @@ class main_wnd_UI(QMainWindow) :
             
             for fits_date in fits_dates :
                 srs_txt, srs_day, delta = get_nearest_srs_from_fits_date(fits_date)
-                print("SRS trouvé :", srs_day.strftime("%Y-%m-%d"))
-                #print("Écart en jours :", delta)
-
-                regions = parse_srs(srs_txt)
-                for ar in regions :
-                    ar_num = ar['AR']
-                    #lat= ar['lat']
-                    #long=ar['lon']
-                    regions_dict[ar_num]=ar
-        
+                
+                if srs_txt :
+                    print("SRS trouvé :", srs_day.strftime("%Y-%m-%d"))
+                    #print("Écart en jours :", delta)
+    
+                    regions = parse_srs(srs_txt)
+                    for ar in regions :
+                        ar_num = ar['AR']
+                        #lat= ar['lat']
+                        #long=ar['lon']
+                        regions_dict[ar_num]=ar
+                else :
+                    
+                    QApplication.restoreOverrideCursor()
+                    return
+                    
         QApplication.restoreOverrideCursor()
         
         color_index = self.ui.syno_color_carte_combo.currentIndex()
@@ -5454,7 +5458,9 @@ class main_wnd_UI(QMainWindow) :
                 annotate_ar(self.ui.syno_plot_view, lon, lat, ar_num, text_color=color)
                 
     
-    
+    def grid_ar_p_north (self):
+        if self.ui.grid_ar_checkbox.isChecked():
+            self.ui.grid_Pdone_checkbox.setChecked(True)
     
     def syno_draw_grid_carte (self,plot_widget, xmin, xmax, ymin, ymax, 
                          dx, dy, color, width):
@@ -7263,22 +7269,28 @@ def get_geom_from_log (flog) :
     return cx,cy,sr,ay1,ay2,ax1,ax2
 
 def download_srs_archive(dt):
-    """Télécharge le SRS archivés NCEI/NGDC pour un jour donné."""
-    year = dt.year
-    month = dt.month
-    yyyymmdd = dt.strftime("%Y%m%d")
-    url = f"https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_region_summaries/{year}/{month:02d}/{yyyymmdd}SRS.txt"
-    r = requests.get(url)
-    if r.status_code == 200:
-        return r.text
+    try :
+        """Télécharge le SRS archivés NCEI/NGDC pour un jour donné."""
+        year = dt.year
+        month = dt.month
+        yyyymmdd = dt.strftime("%Y%m%d")
+        url = f"https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_region_summaries/{year}/{month:02d}/{yyyymmdd}SRS.txt"
+        r = requests.get(url)
+        if r.status_code == 200:
+            return r.text
+    except :
+        pass
     return None
 
 def download_srs_today():
-    """Télécharge le SRS du jour depuis SWPC."""
-    url = "https://services.swpc.noaa.gov/text/srs.txt"
-    r = requests.get(url)
-    if r.status_code == 200:
-        return r.text
+    try :
+        """Télécharge le SRS du jour depuis SWPC."""
+        url = "https://services.swpc.noaa.gov/text/srs.txt"
+        r = requests.get(url)
+        if r.status_code == 200:
+            return r.text
+    except:
+        pass   
     return None
 
 def get_nearest_srs_from_fits_date(fits_date, search_days=3):
@@ -7291,7 +7303,7 @@ def get_nearest_srs_from_fits_date(fits_date, search_days=3):
         if txt:
             return txt, dt, 0
         else:
-            raise FileNotFoundError("SRS du jour non disponible pour le moment.")
+            print("no data")
 
     # Sinon : chercher ± search_days dans l’archive
     best_srs = None
@@ -7311,7 +7323,7 @@ def get_nearest_srs_from_fits_date(fits_date, search_days=3):
                     break
 
     if best_srs is None:
-        raise FileNotFoundError(f"Aucun SRS trouvé pour ±{search_days} jours autour de {fits_date}")
+        print("no data")
 
     return best_srs, best_day, best_delta
 
