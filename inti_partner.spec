@@ -11,7 +11,7 @@ a = Analysis(
     binaries=[],
     datas=[('inti_partner.ui','.'),('intipartner_icon.png','.'),('inti_partner_EN.qm','.'),
 	('sun_spectre_color.png','.'),('sun_spectre_annot_V2.png','.'), ('sun_spectre.png','.'),
-	('img_qt.ui','.'),('gong.ui','.'),('infos_txt.ui','.'),('earth.png','.'),
+	('img_qt.ui','.'),('gong.ui','.'),('movie.ui','.'),('infos_txt.ui','.'),('earth.png','.'),
 	('matplotlib_cache/fontlist-v330.json', 'matplotlib_cache'),
 	('matplotlib_cache/fontlist-v390.json', 'matplotlib_cache')],
     hiddenimports=[],
