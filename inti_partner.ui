@@ -1253,6 +1253,31 @@
           <item>
            <widget class="PlotWidget" name="syno_plot_view"/>
           </item>
+          <item>
+           <widget class="QProgressBar" name="syno_progressbar">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>6</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QProgressBar {
+    min-height: 6px;
+    max-height: 6px;
+}</string>
+            </property>
+            <property name="value">
+             <number>20</number>
+            </property>
+            <property name="textVisible">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </widget>
@@ -1329,7 +1354,7 @@
         <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="currentIndex">
-        <number>10</number>
+        <number>9</number>
        </property>
        <widget class="QWidget" name="page">
         <layout class="QVBoxLayout" name="verticalLayout_38">
@@ -4369,8 +4394,8 @@ QSlider::handle:horizontal:disabled {
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>

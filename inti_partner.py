@@ -133,6 +133,7 @@ Version 1.2 WIP
 - generation gif et mp4
 - rotation sphere sur souris
 - colorisation sphere et animation
+- ameliore grid avec absence fichier log
 
 """
 
@@ -186,7 +187,7 @@ class main_wnd_UI(QMainWindow) :
         
         # init param
         self.myROI=[]
-        self.pattern=''
+        
         
         # force mode compact
         self.ui.main_dock.setMinimumSize(0, 0)
@@ -283,7 +284,7 @@ class main_wnd_UI(QMainWindow) :
         
         pattern_list=['*_disk.png', '*_clahe.png', '*_protus.png', '*_cont.png', '*_free.png', '*.png']
         self.ui.select_pattern_combo.addItems(pattern_list)
-        self.ui.select_pattern_combo.setCurrentIndex(0)
+        self.pattern='*.png'
         
         #page = self.ui.tab_main.findChild(QWidget, 'tab_selector')
         #self.ui.tab_main.setCurrentWidget(page)
@@ -527,11 +528,17 @@ class main_wnd_UI(QMainWindow) :
         self.ui.syno_anim_slider.valueChanged.connect(self.syno_anim_slider_change)
         self.ui.syno_exportas_btn.clicked.connect(self.syno_exportas)
         self.ui.syno_saveas_btn.clicked.connect(self.syno_saveas)
-        self.ui.syno_reset_btn.clicked.connect(self.syno_reset_sphere)   
+        self.ui.syno_reset_btn.clicked.connect(self.syno_reset_sphere)
+        self.ui.syno_color_carte_combo.activated.connect (self.syno_plani_grid)
+        self.ui.syno_grid_carte_chk.stateChanged.connect (self.syno_plani_grid)
+        #self.ui.syno_color_combo.activated.connect (self.syno_sphere_grid)
+        #self.ui.syno_grid_sphere_chk.stateChanged.connect(self.syno_sphere_grid)
+        #self.ui.syno_colorimg_combo.activated.connect (self.sphere_colorize)        
         
         self.ui.syno_anim_slider.setEnabled(False)
         self.ui.syno_make_anim_btn.setEnabled(False)
         self.ui.syno_getAR_btn.setEnabled(False)
+        self.ui.syno_progressbar.setVisible(False)
         
         # --- initialisation des variables L2/B2 ---
         self.L2_deg = 0
@@ -694,6 +701,8 @@ class main_wnd_UI(QMainWindow) :
                 self.selected_files=[]
                 self.select_read()
                 self.view_radio_clicked()
+                self.ui.select_pattern_combo.setCurrentIndex(0)
+        
                 
 
 
@@ -1125,26 +1134,27 @@ class main_wnd_UI(QMainWindow) :
         ext = self.view_get_radio()
         critere= filtre[pattern]+ext
         crit_dir = self.working_dir
-        crit_list =  fnmatch.filter(os.listdir(crit_dir), critere)
-        self.ui.view_dir2_lbl.setText(crit_dir)
-        #self.ui.view_dir_lbl.setText(crit_dir)
-        
-        if not crit_list :
-            if filtre[pattern] == "*_clahe" :
-                crit_dir = self.working_dir+os.sep+"Clahe"
-                crit_list =  fnmatch.filter(os.listdir(crit_dir), critere)
-                self.ui.view_dir2_lbl.setText(crit_dir)
-            if filtre[pattern] == "*_raw" :
-                crit_dir = self.working_dir+os.sep+"Complements"
-                crit_list =  fnmatch.filter(os.listdir(crit_dir), critere)
-                self.ui.view_dir2_lbl.setText(crit_dir)
-        try :
-            self.file_list_view = [crit_dir+os.sep+x for x in crit_list]
-            self.view_display_img(self.file_list_view)
-            self.ui.img_list_view.itemDoubleClicked.connect(self.view_img_click)
+        if Path(crit_dir).exists() and Path(crit_dir).is_dir() and crit_dir!='':
+            crit_list =  fnmatch.filter(os.listdir(crit_dir), critere)
+            self.ui.view_dir2_lbl.setText(crit_dir)
+            #self.ui.view_dir_lbl.setText(crit_dir)
             
-        except :
-            pass
+            if not crit_list :
+                if filtre[pattern] == "*_clahe" :
+                    crit_dir = self.working_dir+os.sep+"Clahe"
+                    crit_list =  fnmatch.filter(os.listdir(crit_dir), critere)
+                    self.ui.view_dir2_lbl.setText(crit_dir)
+                if filtre[pattern] == "*_raw" :
+                    crit_dir = self.working_dir+os.sep+"Complements"
+                    crit_list =  fnmatch.filter(os.listdir(crit_dir), critere)
+                    self.ui.view_dir2_lbl.setText(crit_dir)
+            try :
+                self.file_list_view = [crit_dir+os.sep+x for x in crit_list]
+                self.view_display_img(self.file_list_view)
+                self.ui.img_list_view.itemDoubleClicked.connect(self.view_img_click)
+                
+            except :
+                pass
         
         QApplication.restoreOverrideCursor()
         
@@ -4337,7 +4347,8 @@ class main_wnd_UI(QMainWindow) :
         else :
             try :
                 # TODO : et si on remplacait par self.get_geom
-                cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
+                #cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
+                cx,cy,sr = self.get_geom(self.file_grid,self.img_grid)
                 centreX=int(cx)
                 centreY=int(cy)
                 diam=int(int(sr)*2)
@@ -4565,7 +4576,8 @@ class main_wnd_UI(QMainWindow) :
             if self.ext_grid == "fits" :
                 rsun_pixels = self.hdr['SOLAR_R']
             else :
-                cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
+                #cx,cy,sr,ay1,ay2,ax1,ax2 = get_geom_from_log(self.file_grid_log)
+                cx,cy,sr = self.get_geom(self.file_grid, self.img_grid)
                 rsun_pixels = int(sr)
                 if sr == 0 : flag_do = False
         except :
@@ -4906,6 +4918,9 @@ class main_wnd_UI(QMainWindow) :
         #QApplication.restoreOverrideCursor()
         
         if self.file_list_syno :
+            self.ui.syno_grid_carte_chk.setEnabled(True)
+            self.ui.syno_color_carte_combo.setEnabled(True)
+            
             self.syno_prep() 
             if self.L0_mid == -1 :
                 #QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -4927,6 +4942,9 @@ class main_wnd_UI(QMainWindow) :
             
             self.plani, self.lon_deg, self.lat_deg = syn.build_planisphere_fast(self.images, self.IMAGE_INFO, self.syno_H, self.syno_W, L0,save_with_grid)
             plani_rot=np.fliplr(np.rot90(self.plani, 3))
+            
+            self.flag_plani_done = True
+            self.syno_L0 = L0
             
             plot_widget = self.ui.syno_plot_view  
             plot_widget.clear()  # vide tout ce qui pourrait rester
@@ -4956,41 +4974,9 @@ class main_wnd_UI(QMainWindow) :
             plot_widget.setLabel('left', 'Latitude (°)')
             plot_widget.setTitle(f"Planisphère solaire (Longitude={L0}°)")
             
-            # Afficher la grille
-            stepX = 25
-            stepY = 20
-            epaisseur = 0.1
-            color_index = self.ui.syno_color_carte_combo.currentIndex()
-            color_list = ['white','black','yellow', 'blue', 'lime', 'red','cyan','pink', 'orange']
-            color=color_list[color_index]
-            color = QtGui.QColor(color) if isinstance(color, str) else pg.mkColor(color)
+            self.syno_plani_grid ()
             
-            if self.ui.syno_grid_carte_chk.isChecked() :
-                plot_widget.showGrid(x=False, y=False)
-                # ajouter un cadre blanc 
-                #color = 'white'
-                rect = QGraphicsRectItem(L0, -90, 360,180)
-                rect.setPen(QtGui.QPen(pg.mkColor(color), 0.2))
-                
-                self.grid_items = self.syno_draw_grid_carte (plot_widget, L0, L0+360, -90, 90, 
-                                     stepX, stepY, color, epaisseur)
-            else :
-                plot_widget.showGrid(x=False, y=False)
-                try :
-                    for item in self.grid_items:
-                        plot_widget.removeItem(item)
-                except:
-                    pass
-    
-                self.grid_items = []
-            
-            # Ajuster les limites de la vue sur toute l'image   
-            plot_widget.setLimits(xMin=-180, xMax=360+180, yMin=-180, yMax=+180)
-            plot_widget.setXRange(L0,L0+360)
-            plot_widget.setYRange(-90,90)
-            
-            # Ajoute dans le PlotWidget
-            plot_widget.addItem(rect)
+           
     
             
             plot_widget.setAspectLocked(True)  # garde les pixels carrés
@@ -5000,7 +4986,7 @@ class main_wnd_UI(QMainWindow) :
             self.ui.syno_make_anim_btn.setEnabled(False)
             self.ui.syno_getAR_btn.setEnabled(True)
             self.vb.sphere_mode = False
-            self.syno_L0 = L0
+            
             
         #QApplication.setOverrideCursor(Qt.WaitCursor)
         QApplication.restoreOverrideCursor()
@@ -5122,6 +5108,8 @@ class main_wnd_UI(QMainWindow) :
             
             self.flag_plani_done = False
             self.ui.syno_getAR_btn.setEnabled(False)
+            self.ui.syno_grid_carte_chk.setEnabled(False)
+            self.ui.syno_color_carte_combo.setEnabled(False)
             
             #QApplication.setOverrideCursor(Qt.WaitCursor)
             QApplication.restoreOverrideCursor()
@@ -5150,6 +5138,9 @@ class main_wnd_UI(QMainWindow) :
                    
                 self.plani, self.lon_deg, self.lat_deg = syn.build_planisphere_fast(self.images, self.IMAGE_INFO, self.syno_H, self.syno_W, L0,save_with_grid)
                 self.flag_plani_done = True
+                self.syno_L0 = L0
+                
+                
             try :
                 L2_deg = float(self.ui.syno_L2_txt.text())
             except:
@@ -5167,23 +5158,7 @@ class main_wnd_UI(QMainWindow) :
             jmax = 800
             cx=imax//2 
             cy=jmax//2
-            
-            """
-            #  swing polaire >> marche mais trop gadget 
-            if self.ui.syno_polar_swing_chk.isChecked() :
-                
-                # calcul de la phase normalisée
-                x = ((L2_deg - self.L0_min) * self._inv_w + self._x0) % 2.0
-            
-                # calcul B2_deg centré sur _B2_center
-                B2_deg = self._B2_center + self._A * (2.0 * (1 - abs(x - 1)) - 1)
-            
-                # affichage
-                self.ui.syno_B2_txt.setText(f"{B2_deg:.1f}")
-            else :
-                # B2_deg0 = valeur centrale de l'oscillation remise à la valeur du texte
-                self._B2_center = float(self.ui.syno_B2_txt.text()) 
-            """    
+                        
             sphere = syn.disk_from_planisphere_fast(self.plani, self.syno_H, self.syno_W, self.lon_deg, self.lat_deg,
                               L2_deg, B2_deg,
                               R2, imax, jmax,
@@ -5226,6 +5201,8 @@ class main_wnd_UI(QMainWindow) :
             self.ui.syno_make_anim_btn.setEnabled(True)
             self.ui.syno_anim_slider.setValue(L2_deg)
             self.ui.syno_getAR_btn.setEnabled(False)
+            self.ui.syno_grid_carte_chk.setEnabled(False)
+            self.ui.syno_color_carte_combo.setEnabled(False)
             self.vb.sphere_mode = True
     
     def syno_update_disk_and_grid (self,L2_deg,B2_deg, geom=(170,380)) :  # was 236,512     
@@ -5257,14 +5234,14 @@ class main_wnd_UI(QMainWindow) :
             jmax = imax
                       
             cx=imax//2 
-            cy=jmax//2
-            
+            cy=jmax//2           
                            
             sphere = syn.disk_from_planisphere_fast(self.plani, self.syno_H, self.syno_W, self.lon_deg, self.lat_deg,
                               L2_deg, B2_deg,
                               R2, imax, jmax,
                               output_file=None,
                               draw_grid_flag=True)
+            
             couleur=self.ui.syno_colorimg_combo.currentText()
             if ( couleur !='Aucune' and couleur !='None') :
                 sphere = Colorise_Image(couleur, sphere)
@@ -5287,6 +5264,7 @@ class main_wnd_UI(QMainWindow) :
             plot_widget.addItem(img_item)
             plot_widget.autoRange()   
             plot_widget.setAspectLocked(True)  # garde les pixels carrés
+            
             if self.ui.syno_grid_sphere_chk.isChecked() :
                 color_index = self.ui.syno_color_combo.currentIndex()
                 color_list = ['yellow', 'blue', 'black', 'white', 'lime', 'red','cyan','violet', 'orange']
@@ -5411,7 +5389,55 @@ class main_wnd_UI(QMainWindow) :
         self.gif_wnd = movie_wnd(str(file_name_gif))
         self.gif_wnd.show()
 
+    def syno_plani_grid (self) :
+       
+        if self.flag_plani_done == True :
+            
+            plot_widget = self.ui.syno_plot_view  
+            
+            try :
+                for item in self.grid_items:
+                    plot_widget.removeItem(item)
+            except:
+                pass
+            
+            
+            L0 =  self.syno_L0
+            # Afficher la grille
+            stepX = 25
+            stepY = 20
+            epaisseur = 0.1
+            color_index = self.ui.syno_color_carte_combo.currentIndex()
+            color_list = ['white','black','yellow', 'blue', 'lime', 'red','cyan','pink', 'orange']
+            color=color_list[color_index]
+            color = QtGui.QColor(color) if isinstance(color, str) else pg.mkColor(color)
+            
+            if self.ui.syno_grid_carte_chk.isChecked() :
+                plot_widget.showGrid(x=False, y=False)
+                # ajouter un cadre blanc 
+                #color = 'white'
+                rect = QGraphicsRectItem(L0, -90, 360,180)
+                rect.setPen(QtGui.QPen(pg.mkColor(color), 0.2))
+                
+                self.grid_items = self.syno_draw_grid_carte (plot_widget, L0, L0+360, -90, 90, 
+                                     stepX, stepY, color, epaisseur)
+            else :
+                plot_widget.showGrid(x=False, y=False)
+                try :
+                    for item in self.grid_items:
+                        plot_widget.removeItem(item)
+                except:
+                    pass
     
+                self.grid_items = []
+            
+            # Ajuster les limites de la vue sur toute l'image   
+            plot_widget.setLimits(xMin=-180, xMax=360+180, yMin=-180, yMax=+180)
+            plot_widget.setXRange(L0,L0+360)
+            plot_widget.setYRange(-90,90)
+            
+            # Ajoute dans le PlotWidget
+            plot_widget.addItem(rect)
     
     def syno_getAR (self):
         if self.flag_plani_done :
@@ -5424,10 +5450,14 @@ class main_wnd_UI(QMainWindow) :
             L_max= self.IMAGE_INFO_FULL[0][2]+80
             L_min=self.IMAGE_INFO_FULL[-1][2]-80
             #print(int(L_min), int(L_max))
+            i = 1
+            self.ui.syno_progressbar.setMaximum(len(fits_dates))
+            self.ui.syno_progressbar.setVisible(True)
             
             for fits_date in fits_dates :
+                self.ui.syno_progressbar.setValue(i)
                 srs_txt, srs_day, delta = get_nearest_srs_from_fits_date(fits_date)
-                
+                i = i + 1
                 if srs_txt :
                     print("SRS trouvé :", srs_day.strftime("%Y-%m-%d"))
                     #print("Écart en jours :", delta)
@@ -5443,6 +5473,7 @@ class main_wnd_UI(QMainWindow) :
                     QApplication.restoreOverrideCursor()
                     return
                     
+        self.ui.syno_progressbar.setVisible(False)
         QApplication.restoreOverrideCursor()
         
         color_index = self.ui.syno_color_carte_combo.currentIndex()
@@ -5494,7 +5525,9 @@ class main_wnd_UI(QMainWindow) :
             y += dy
     
         return grid_items
-            
+    
+        
+        
     def syno_draw_coord_grid_on_disk(self,xc, yc, R, L2_deg, B2_deg, color, step=10):
         Lc = np.deg2rad(L2_deg)
         Bc = np.deg2rad(B2_deg)
