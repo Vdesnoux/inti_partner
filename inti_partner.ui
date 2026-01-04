@@ -47,7 +47,7 @@
          <enum>QTabWidget::TabShape::Rounded</enum>
         </property>
         <property name="currentIndex">
-         <number>10</number>
+         <number>2</number>
         </property>
         <property name="tabsClosable">
          <bool>false</bool>
@@ -1354,7 +1354,7 @@
         <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="currentIndex">
-        <number>9</number>
+        <number>10</number>
        </property>
        <widget class="QWidget" name="page">
         <layout class="QVBoxLayout" name="verticalLayout_38">

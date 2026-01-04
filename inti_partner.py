@@ -137,6 +137,7 @@ Version 1.2 WIP
 
 """
 
+# TODO : inversion raw haut-bas ?
 
 
 class main_wnd_UI(QMainWindow) :
@@ -208,7 +209,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.version_label.setText("Version : "+self.version)
         self.ui.tab_main.currentChanged.connect(self.on_tab_changed)
         
-        # tab viewer
+        # ---- tab viewer
         # ------------------------------------------------------------------
         # signaux
         #self.ui.view_open_btn.clicked.connect(self.view_open_clicked)
@@ -229,7 +230,7 @@ class main_wnd_UI(QMainWindow) :
 
         
         
-        # tab stack
+        # ---- tab stack
         # ------------------------------------------------------------------
         # signaux
         self.ui.stack_img_list_open.clicked.connect(self.stack_img_list_open_clicked)
@@ -251,7 +252,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.stack_image_view.ui.histogram.hide()
         
         
-        # tab selector
+        # ---- tab selector
         # ------------------------------------------------------------------
         # signaux
         self.ui.select_open_dir_btn.clicked.connect(self.select_open_dir_clicked)
@@ -273,6 +274,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.select_flip_dg_btn.clicked.connect(self.select_flip_dg)
         self.ui.select_delete_btn.clicked.connect(self.select_del_serie)
         
+        
         # setting
         self.ui.select_image_view_ref.ui.roiBtn.hide()
         self.ui.select_image_view_ref.ui.menuBtn.hide()
@@ -289,7 +291,7 @@ class main_wnd_UI(QMainWindow) :
         #page = self.ui.tab_main.findChild(QWidget, 'tab_selector')
         #self.ui.tab_main.setCurrentWidget(page)
         
-        # tab mosa
+        # ---- tab mosa
         # ------------------------------------------------------------------
         # signaux
         self.ui.mosa_img_open.clicked.connect(self.mosa_img_open_clicked)
@@ -303,7 +305,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.mosa_image_view.ui.menuBtn.hide()
         self.ui.mosa_image_view.ui.histogram.hide()       
         
-        # tab anim
+        # ---- tab anim
         # ------------------------------------------------------------------
         self.ui.anim_img_list_open_btn.clicked.connect(self.anim_img_list_open_clicked)
         self.ui.anim_list.selectionModel().selectionChanged.connect(self.anim_list_sel_changed)
@@ -344,7 +346,7 @@ class main_wnd_UI(QMainWindow) :
         layout.addWidget(self.ui.anim_play_btn)
         self.ui.anim_video_frame.setLayout(layout)
         
-        # tab map
+        # ---- tab map
         # -----------------------------------------------------------------
         
         # setting
@@ -389,8 +391,8 @@ class main_wnd_UI(QMainWindow) :
         self.ui.map_image_ref_view.view.setRange(xRange=[200,iw], yRange=[0,1500], padding=0)
         self.ui.map_image_ref_view.setImage(rotated_data,autoRange=False, autoLevels=True)
         
-        # tab magnet
-        #-------------------------------------------------------------------
+        # ---- tab magnet
+        # -------------------------------------------------------------------
         
         # setting
         self.ui.mag_img_view.ui.roiBtn.hide()
@@ -404,8 +406,8 @@ class main_wnd_UI(QMainWindow) :
         self.ui.mag_gauche_list.selectionModel().selectionChanged.connect(self.mag_gauche_list_sel_changed)
         self.ui.mag_results_list.selectionModel().selectionChanged.connect(self.mag_results_list_sel_changed)
         
-        # tab SER
-        #-------------------------------------------------------------------
+        # ---- tab SER
+        # -------------------------------------------------------------------
         
         # setting
         self.ui.ser_view.ui.roiBtn.hide()
@@ -590,7 +592,7 @@ class main_wnd_UI(QMainWindow) :
         
         self.ui.syno_plot_view.setBackground((20, 20, 20))
         
-
+        
 
         #--------------------------------------------------------------------
         # init param application
@@ -646,6 +648,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.dock_console.show()
         self.on_tab_changed(self.current_tab)
         QApplication.restoreOverrideCursor()
+        
        
     
     def closeEvent (self,event):
@@ -1203,16 +1206,18 @@ class main_wnd_UI(QMainWindow) :
         
     
     def view_open_context_menu(self, pos) :
-        if self.ui.view_ser_radio.isChecked() :
-            item = self.ui.img_list_view.itemAt(pos)
-            if not item:
-                return  # Pas de fichier sous le clic
-            else :
-                self.selected_filename = item.text()
-                
-    
-            menu = QMenu(self)
+        
+        item = self.ui.img_list_view.itemAt(pos)
+        if not item:
+            return  # Pas de fichier sous le clic
+        else :
             self.selected_filename = item.text()
+            
+
+        menu = QMenu(self)
+        self.selected_filename = item.text()
+        
+        if self.ui.view_ser_radio.isChecked() :
             action_chdir = menu.addAction(self.tr("Changer répertoire INTI"))
             action_ouvrir = menu.addAction(self.tr("Ouvrir INTI"))
             action_lancer = menu.addAction(self.tr("Traiter avec INTI"))
@@ -1225,6 +1230,23 @@ class main_wnd_UI(QMainWindow) :
                 self.view_run_inti()
             elif action == action_chdir :
                 self.view_chdir_inti()
+        else :
+            # supprime
+            action_supprimer = menu.addAction(self.tr("Supprimer fichiers"))
+            
+            action = menu.exec(self.ui.img_list_view.viewport().mapToGlobal(pos))
+    
+            if action == action_supprimer:
+                print(self.working_dir+os.sep+self.selected_filename)
+                
+                flag_del = self.delete_serie(self.selected_filename)
+                
+                if flag_del :
+                    # et on le supprime de la liste
+                    self.ui.img_list_view.removeItemWidget(item)
+                    row = self.ui.img_list_view.row(item)
+                    self.ui.img_list_view.takeItem(row)
+        
 
     def view_chdir_inti(self) :
         inti_exe, _ = QFileDialog.getOpenFileName(self, "Trouver executable inti", "", "inti (inti*.exe)")
@@ -2057,71 +2079,11 @@ class main_wnd_UI(QMainWindow) :
         index=self.current_index
         print(self.working_dir+os.sep+self.select_files[index])
         
-        ref_path = Path(self.working_dir+os.sep+self.select_files[index])
-        directory = ref_path.parent
-        ref_stem = ref_path.stem
-        racine = get_baseline (self.working_dir+os.sep+ref_stem)
-        racine= os.path.split(racine)[1]
+        flag_del = self.delete_serie(self.select_files[index])
         
-        if os.path.basename(self.working_dir.rstrip("/\\")) == "Clahe":
-            # cas répertoire de base est le sous-repertoire clahe
-            rep_parent =os.path.dirname(self.working_dir)
-            match_files_clahe = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
-            match_files =  [os.path.split(f)[1] for f in Path(rep_parent).iterdir() if f.is_file() and f.stem.startswith(racine)]
-            match_files_comp =  [os.path.split(f)[1] for f in Path(rep_parent+os.sep+'Complements').iterdir() if f.is_file() and f.stem.startswith(racine)]
-            working_dir= rep_parent
-        
-        elif os.path.basename(self.working_dir.rstrip("/\\")) == "Complements": 
-            # cas répertoire Complements
-            rep_parent =os.path.dirname(self.working_dir)
-            match_files_comp = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
-            match_files =  [os.path.split(f)[1] for f in Path(rep_parent).iterdir() if f.is_file() and f.stem.startswith(racine)]
-            match_files_clahe =  [os.path.split(f)[1] for f in Path(rep_parent+os.sep+'Clahe').iterdir() if f.is_file() and f.stem.startswith(racine)]
-            working_dir= rep_parent
-        else :
-       
-            # cas répertoire de travail
-            match_files = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
-            match_files_clahe =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Clahe').iterdir() if f.is_file() and f.stem.startswith(racine)]
-            match_files_comp =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Complements').iterdir() if f.is_file() and f.stem.startswith(racine)]
-            working_dir = self.working_dir
-        
-        
-        
-        # fichier d'acquisition ser et Cie
-        #racine_acq = racine[1:]
-        #match_files_acq = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine_acq)]
-        #print("racine : "+ racine)
-        
-        
-        msg = QMessageBox()
-        msg.setWindowTitle("Fichiers à supprimer")
-        msg.setText("fichiers trouvés :\n" + "\n".join(match_files)
-                    +"\n Clahe :\n"+ "\n".join(match_files_clahe)+"\n complements :\n"+ "\n".join(match_files_comp))
-        btn_confirm = msg.addButton("Confirmer", QMessageBox.AcceptRole) 
-        btn_cancel  = msg.addButton("Annuler",  QMessageBox.RejectRole)
-        msg.exec()
-        
-        clicked = msg.clickedButton()
-        if clicked == btn_confirm:
-            print (self.tr("Fichiers envoyés à la corbeille : "))
-            for f in match_files:
-                ff= Path(working_dir) / f 
-                send2trash(ff)
-                print(f)
-            for f in match_files_clahe :
-                ff= Path(working_dir) / Path('Clahe') / f
-                send2trash(ff)
-                print(f)
-            for f in match_files_comp :
-                ff= Path(working_dir) / Path('Complements') / f
-                send2trash(ff)
-                print(f)
-        elif clicked == btn_cancel:
-            print("Opération annulée")
-        
-        # et on le supprime de la liste
-        self.select_remove_clicked()
+        if flag_del :
+            # et on le supprime de la liste
+            self.select_remove_clicked()
         
     def sort_files_IQ (self):
         # tableau facteur de qualité,fichier et liste fichier classés
@@ -3207,7 +3169,8 @@ class main_wnd_UI(QMainWindow) :
             file_raw=self.working_dir+os.sep+'Complements'+os.sep+basefich+'_raw.png'
             if file_exist(file_raw) :
                 img_raw=cv2.imread(str(Path(file_raw)),cv2.IMREAD_UNCHANGED)
-                img_raw = np.fliplr(np.rot90(img_raw, 3))
+                #img_raw = np.fliplr(np.rot90(img_raw, 3))
+                img_raw = np.rot90(img_raw, 3)
                 # affiche fichier raw
                 self.ui.ser_raw_view.setImage(img_raw)
                 self.ui.ser_raw_filename_lbl.setText(file_raw)
@@ -3215,7 +3178,8 @@ class main_wnd_UI(QMainWindow) :
                 file_raw=self.working_dir+os.sep+os.sep+basefich+'_raw.png'
                 if file_exist(file_raw) :
                     img_raw=cv2.imread(str(Path(file_raw)),cv2.IMREAD_UNCHANGED)
-                    img_raw = np.fliplr(np.rot90(img_raw, 3))
+                    #img_raw = np.fliplr(np.rot90(img_raw, 3))
+                    img_raw = np.rot90(img_raw, 3)
                     # affiche fichier raw
                     self.ui.ser_raw_view.setImage(img_raw)
                     self.ui.ser_raw_filename_lbl.setText(file_raw)
@@ -5817,7 +5781,75 @@ class main_wnd_UI(QMainWindow) :
         
         return file_proc_log
 
+    def delete_serie (self, filename) :
+        ref_path = Path(self.working_dir+os.sep+filename)
+        directory = ref_path.parent
+        ref_stem = ref_path.stem
+        racine = get_baseline (self.working_dir+os.sep+ref_stem)
+        racine= os.path.split(racine)[1]
         
+        if os.path.basename(self.working_dir.rstrip("/\\")) == "Clahe":
+            # cas répertoire de base est le sous-repertoire clahe
+            rep_parent =os.path.dirname(self.working_dir)
+            match_files_clahe = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files =  [os.path.split(f)[1] for f in Path(rep_parent).iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files_comp =  [os.path.split(f)[1] for f in Path(rep_parent+os.sep+'Complements').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            working_dir= rep_parent
+        
+        elif os.path.basename(self.working_dir.rstrip("/\\")) == "Complements": 
+            # cas répertoire Complements
+            rep_parent =os.path.dirname(self.working_dir)
+            match_files_comp = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files =  [os.path.split(f)[1] for f in Path(rep_parent).iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files_clahe =  [os.path.split(f)[1] for f in Path(rep_parent+os.sep+'Clahe').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            working_dir= rep_parent
+        else :
+       
+            # cas répertoire de travail
+            match_files = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files_clahe =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Clahe').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            match_files_comp =  [os.path.split(f)[1] for f in Path(self.working_dir+os.sep+'Complements').iterdir() if f.is_file() and f.stem.startswith(racine)]
+            working_dir = self.working_dir
+        
+        
+        
+        # fichier d'acquisition ser et Cie
+        #racine_acq = racine[1:]
+        #match_files_acq = [os.path.split(f)[1] for f in directory.iterdir() if f.is_file() and f.stem.startswith(racine_acq)]
+        #print("racine : "+ racine)
+        
+        
+        msg = QMessageBox()
+        msg.setWindowTitle("Fichiers à supprimer")
+        msg.setText("fichiers trouvés :\n" + "\n".join(match_files)
+                    +"\n Clahe :\n"+ "\n".join(match_files_clahe)+"\n complements :\n"+ "\n".join(match_files_comp))
+        btn_confirm = msg.addButton("Confirmer", QMessageBox.AcceptRole) 
+        btn_cancel  = msg.addButton("Annuler",  QMessageBox.RejectRole)
+        msg.exec()
+        
+        clicked = msg.clickedButton()
+        if clicked == btn_confirm:
+            flag_deleted = True
+            print (self.tr("Fichiers envoyés à la corbeille : "))
+            for f in match_files:
+                ff= Path(working_dir) / f 
+                send2trash(ff)
+                print(f)
+            for f in match_files_clahe :
+                ff= Path(working_dir) / Path('Clahe') / f
+                send2trash(ff)
+                print(f)
+                
+            for f in match_files_comp :
+                ff= Path(working_dir) / Path('Complements') / f
+                send2trash(ff)
+                print(f)
+        elif clicked == btn_cancel:
+            print("Opération annulée")
+            flag_deleted = False
+    
+        return flag_deleted      
+            
 # ----------------------------------------------------------------------------
 # class new window to display image floating
 #-----------------------------------------------------------------------------
