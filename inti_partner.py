@@ -53,6 +53,7 @@ from send2trash import send2trash
 
 import synoptique as syn
 import time
+from spectrosolhub_dialog import SpectroSolHubWidget
 
 
 
@@ -594,6 +595,19 @@ class main_wnd_UI(QMainWindow) :
         
         
 
+        # tab SpectroSolHub
+        # ------------------------------------------------------------------
+        self.spectrosolhub_widget = SpectroSolHubWidget(
+            parent=self.ui,
+            working_dir=self.working_dir,
+            get_geom_func=self.get_geom,
+            get_log_file_func=self.get_log_file,
+            read_fits_func=self.read_fits_image,
+            langue=self.langue if hasattr(self, 'langue') else 'Fr',
+            version=self.version,
+        )
+        self.ui.tab_main.addTab(self.spectrosolhub_widget, "SpectroSolHub")
+
         #--------------------------------------------------------------------
         # init param application
         #--------------------------------------------------------------------
@@ -977,6 +991,7 @@ class main_wnd_UI(QMainWindow) :
             self.ui.view_dir2_lbl.setText(self.working_dir)
             #self.ui.view_dir_lbl.setText(self.working_dir)
             self.ui.select_dir_lbl.setText(self.working_dir)
+            self.spectrosolhub_widget.set_working_dir(self.working_dir)
             self.select_read()
             self.view_radio_clicked()
 
@@ -1233,14 +1248,14 @@ class main_wnd_UI(QMainWindow) :
         else :
             # supprime
             action_supprimer = menu.addAction(self.tr("Supprimer fichiers"))
-            
+
             action = menu.exec(self.ui.img_list_view.viewport().mapToGlobal(pos))
-    
+
             if action == action_supprimer:
                 print(self.working_dir+os.sep+self.selected_filename)
-                
+
                 flag_del = self.delete_serie(self.selected_filename)
-                
+
                 if flag_del :
                     # et on le supprime de la liste
                     self.ui.img_list_view.removeItemWidget(item)
