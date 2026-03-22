@@ -235,8 +235,8 @@ def _float_or_none(text):
 
 def _image_kind_from_filename(filename):
     """Determine image kind from filename suffix.
-    Used only for filtering (e.g. excluding RAW).
-    The imageKind sent to the API is always INTI_PARTNER."""
+    Used for filtering (e.g. excluding RAW) and as suffix for the
+    API imageKind (e.g. INTI_PARTNER_DISK, INTI_PARTNER_CLAHE)."""
     fn = os.path.basename(filename).lower()
     if "_disk" in fn:
         return "DISK"
@@ -329,7 +329,7 @@ class UploadWorker(QThread):
             for i, file_path in enumerate(self.image_files):
                 jpeg_bytes = _image_to_jpeg_bytes(file_path)
                 title = os.path.splitext(os.path.basename(file_path))[0]
-                image_kind = "INTI_PARTNER"
+                image_kind = "INTI_PARTNER_" + _image_kind_from_filename(file_path)
                 metadata = self.build_metadata_func(file_path)
                 metadata_json = json.dumps(metadata) if metadata else None
 
