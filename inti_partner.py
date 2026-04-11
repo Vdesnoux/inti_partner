@@ -747,7 +747,7 @@ class main_wnd_UI(QMainWindow) :
             self.ui.panelWidget.setCurrentIndex(11)
             self.hub_get_obs_list(self.working_dir)
             #print(self.working_dir)
-                
+            self.spectrosolhub_widget.set_working_dir(self.working_dir)
 
 
     def read_ini(self) :
