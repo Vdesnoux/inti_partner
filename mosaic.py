@@ -113,6 +113,8 @@ def decode_log(flog):
         
     return cx,cy,sr,ay1,ay2,ax1,ax2
 
+
+
 def analyse_geom (frame) :
     # conversion couleur noir et blanc
     if len(frame.shape) > 2 :
@@ -316,27 +318,6 @@ def prepare_files(WorkDir, ImgFiles, flag_use_log) :
                     # lit fichier png
                     imm=Image.open(ImgFiles[i])
                     myimg.append(np.flip(np.array(imm),0))
-                    
-                    """
-                    if len(myimg[i].shape) > 2 :
-                        img_nb = np.copy(myimg[i])
-                        # creer des images nb pour calculer la geometrie
-                        # Normaliser selon la profondeur
-                        if img_nb.dtype == np.uint8:
-                            img_nb = img_nb.astype(np.float32) / 255.0
-                        elif img_nb.dtype == np.uint16:
-                            img_nb = img_nb.astype(np.float32) / 65535.0
-                        else:
-                            raise TypeError("Type d'image non supporté (uint8 ou uint16 attendu)")
-                    
-                        # Conversion standard vers niveaux de gris
-                        gray = 0.299 * img_nb[..., 0] + 0.587 * img_nb[..., 1] + 0.114 * img_nb[..., 2]
-                    
-                        # Revenir sur 16 bits
-                        img_nb = np.clip(gray * 65535, 0, 65535).astype(np.uint16)
-                        
-                        myimg_nb.append(img_nb)
-                    """
                     
                     ih.append(myimg[i].shape[0])
                     iw.append(myimg[i].shape[1])
@@ -666,7 +647,17 @@ def create_mosa (WorkDir, ImgFiles, ext, myimg, iw, ih, centerX, centerY, solarR
         im= fits_to_PIL (im_crop, s1, s2)
         # sortie im 
     """  
-       
+    try :
+        if nbplan == 1 :
+            cx,cy,sr,ay1,ay2,ax1,ax2 = analyse_geom(im_crop)
+        else :
+            cx,cy,sr,ay1,ay2,ax1,ax2 = analyse_geom(img_color)
+        geom = [cx,cy,sr,ay1,ay2,ax1,ax2]
+    except :
+        print("Error geom mosa")
+        cy=centerY[0]
+        cx = centerX[0]
+        sr= solarR[0]
     
     # sauvegarde resultats
     if ext == '.fits' :
@@ -675,8 +666,11 @@ def create_mosa (WorkDir, ImgFiles, ext, myimg, iw, ih, centerX, centerY, solarR
         hdu1=hdulist1[0]
         # sauve fits
         hdu1.header['NAXIS2']=iw[0]
-        hdu1.header['centerY']=centerY[0]
-        hdu1.header['solar_R']=solarR[0]
+        #hdu1.header['centerY']=centerY[0]
+        #hdu1.header['solar_R']=solarR[0]
+        hdu1.header['centerY']=cy
+        hdu1.header['centerX']=cx
+        hdu1.header['solar_R']=sr
         nom_fits_short=ImgFiles[0].split('.')[0]+"-"+ImgFiles[len(ImgFiles)-1].split('.')[0]+".fits"
         nom_fits=WorkDir+os.sep+nom_fits_short
         DiskHDU=fits.PrimaryHDU(im_crop,hdu1.header)
@@ -725,8 +719,6 @@ def create_mosa (WorkDir, ImgFiles, ext, myimg, iw, ih, centerX, centerY, solarR
             im=np.array(im, dtype='uint16')
             im=cv2.flip(im,0)
 
-            
-    
     
     print("")
     trad("Succès !!", "Success !!")
@@ -735,7 +727,9 @@ def create_mosa (WorkDir, ImgFiles, ext, myimg, iw, ih, centerX, centerY, solarR
     trad("Image png : "+nom_png_short, "Png image : "+nom_png_short)
     print("")
     
-    return im, nbplan, nom_base
+    
+    
+    return im, nbplan, nom_base, geom
                 
 # routine de resizing circulaire
 

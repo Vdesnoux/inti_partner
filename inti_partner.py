@@ -125,7 +125,7 @@ Version 1.1
 - gestion supprime depuis selector si fichier dans clahe ou complements
 - trad anglaise de supprimer dans selector
 
-Version 1.2 WIP
+Version 1.2
 - ajout synoptic tab avec sphere, regions, synoptic
 - ajout test fichier log et sinon analyse pour grid et proc
 - ajout telechargement zones actives
@@ -136,6 +136,11 @@ Version 1.2 WIP
 - colorisation sphere et animation
 - ameliore grid avec absence fichier log
 
+Version 1.3 
+- correction bug image non carrée pour grille et Terre
+- creation tab spectrosolhub tab et connection by Cedric Champeau
+- ajout dock panel et custom interface, log file decode, sunscan prefill, obs time list
+- creation log file sur mosa                                  
 """
 
 # TODO : inversion raw haut-bas ?
@@ -147,7 +152,7 @@ class main_wnd_UI(QMainWindow) :
         #super().__init__(parent)
         super(main_wnd_UI, self).__init__()
         
-        self.version ="1.2"
+        self.version ="1.3"
         
         #fichier GUI par Qt Designer
         loader = QUiLoader()
@@ -458,7 +463,7 @@ class main_wnd_UI(QMainWindow) :
         self.ui.spectre_view.getAxis("right").setTextPen(pen_axis2)
        
 
-        # tab proc
+        # ---- tab proc
         # -------------------------------------------------------------------
         
         # settings
@@ -479,9 +484,11 @@ class main_wnd_UI(QMainWindow) :
         self.ui.proc_angP_btn.clicked.connect(self.proc_angP)
         #self.ui.proc_ang_btn.clicked.connect(self.proc_ang)
         self.ui.proc_infos_btn.clicked.connect(self.proc_infos)
+        self.ui.proc_hb_btn.clicked.connect(self.proc_hb)
+        self.ui.proc_dg_btn.clicked.connect(self.proc_dg)
         
         
-        # tab grid
+        # ---- tab grid
         # -------------------------------------------------------------------
         
         # settings
@@ -514,7 +521,7 @@ class main_wnd_UI(QMainWindow) :
         self.geom_dict={}
 
         
-        # tab synoptic
+        # ---- tab synoptic
         # ------------------------------------------------------------------
         
         # signaux
@@ -595,7 +602,7 @@ class main_wnd_UI(QMainWindow) :
         
         
 
-        # tab SpectroSolHub
+        # ---- tab SpectroSolHub
         # ------------------------------------------------------------------
         self.spectrosolhub_widget = SpectroSolHubWidget(
             parent=self.ui,
@@ -607,6 +614,17 @@ class main_wnd_UI(QMainWindow) :
             version=self.version,
         )
         self.ui.tab_main.addTab(self.spectrosolhub_widget, "SpectroSolHub")
+        # connect signaux du panel deck
+        #self.ui.buttonGroup_4.buttonToggled.connect(self.hub_filter_changed)
+        #self.ui.buttonGroup_4.setExclusive(False)
+        #self.ui.buttonGroup_4.buttons() [0].setChecked(False)
+        #self.ui.buttonGroup_4.buttons() [1].setChecked(True)
+        self.ui.hub_select_btn.clicked.connect(self.hub_select_all)
+        self.ui.hub_deselect_btn.clicked.connect(self.hub_deselect_all)
+        self.spectrosolhub_widget.hub_change_dir.connect(self.hub_get_obs_list)
+        self.spectrosolhub_widget.thumbnailDoubleClicked.connect(self.on_hub_thumb_double_clicked)
+        
+        
 
         #--------------------------------------------------------------------
         # init param application
@@ -655,6 +673,9 @@ class main_wnd_UI(QMainWindow) :
         
         # force antialiasing option de pyqtgraph
         pg.setConfigOptions(antialias=True)
+        
+        # on rempli la liste des observations pour spectroSolHub
+        self.hub_get_obs_list(self.working_dir)
     
     
     def show(self) :
@@ -720,6 +741,9 @@ class main_wnd_UI(QMainWindow) :
                 self.view_radio_clicked()
                 self.ui.select_pattern_combo.setCurrentIndex(0)
         
+        # solhub
+        if index == 12 :
+            self.ui.panelWidget.setCurrentIndex(11)
                 
 
 
@@ -1062,24 +1086,29 @@ class main_wnd_UI(QMainWindow) :
     
     def view_img_click (self,item) :
         QApplication.setOverrideCursor(Qt.WaitCursor)
+        # QApplication.restoreOverrideCursor()
         
         index= self.ui.img_list_view.row(item)
         self.file_view= self.file_list_view[index]
-        ext = self.get_extension(self.file_view)
+        
+        self.display_image_solo (self.file_view)
+        
+    def display_image_solo (self, file_view):
+        ext = self.get_extension(file_view)
         
         if ext=='png' or ext=='tiff' :
-            img_data=cv2.imread(str(Path(self.file_view)),cv2.IMREAD_UNCHANGED)
+            img_data=cv2.imread(str(Path(file_view)),cv2.IMREAD_UNCHANGED)
             if len(img_data.shape) == 3 :
                 img_data=cv2.cvtColor(img_data,cv2.COLOR_BGR2RGB)   
         
         if ext == 'fits' :
-            mydata, header= self.read_fits_image(self.file_view)
+            mydata, header= self.read_fits_image(file_view)
             h, w = mydata.shape
             img_data=np.array(mydata,dtype='uint16')
         
         if ext == "ser" :
             try:
-                scan = Serfile(self.file_view, False)
+                scan = Serfile(file_view, False)
             
                 self.FrameCount = scan.getLength()    #      return number of frame in SER file.
                 Width = int(scan.getWidth())          #      return width of a frame
@@ -1115,7 +1144,7 @@ class main_wnd_UI(QMainWindow) :
                 data_offset=178
                 frame_size = Width * Height
                 
-                with open(self.file_view, "rb") as f:
+                with open(file_view, "rb") as f:
                     f.seek(data_offset)  # sauter l'entête
                     frames = np.fromfile(f, dtype=dtype, count=self.FrameCount * frame_size)
                 
@@ -1126,7 +1155,7 @@ class main_wnd_UI(QMainWindow) :
                 ser_volume = frames.reshape((self.FrameCount, Height, Width))
                  
             except:
-                print(self.tr('Erreur ouverture fichier : ')+self.file_view)
+                print(self.tr('Erreur ouverture fichier : ')+file_view)
         
         self.myimg_solo.show()
         if ext == "ser" :
@@ -1137,7 +1166,7 @@ class main_wnd_UI(QMainWindow) :
         self.myimg_solo.ui.inti_view.setImage(img_proc, autoRange=False)
         if ext == "ser" :
             self.myimg_solo.ui.inti_view.setCurrentIndex(Frame_start)
-        self.myimg_solo.set_title(self.short_name(self.file_list_view[index]))
+        self.myimg_solo.set_title(self.short_name(file_view))
         self.myimg_solo.on_ferme.connect(self.view_open_in_tab)
         self.myimg_solo.ui.raise_()
         self.myimg_solo.ui.activateWindow()      
@@ -2313,7 +2342,19 @@ class main_wnd_UI(QMainWindow) :
         if flag_error == True :
             print(self.tr("Erreur lecture géométrie"))
         else :
-            mosa_im, nbplan, nom_base = mo.create_mosa(self.working_dir, self.file_list_mosa, ext, myimg, iw, ih, centerX, centerY, solarR, x1, x2, y1, y2)
+            mosa_im, nbplan, nom_base, geom = mo.create_mosa(self.working_dir, self.file_list_mosa, ext, myimg, iw, ih, centerX, centerY, solarR, x1, x2, y1, y2)
+            
+            # gere geom 
+            if ext == "png" :
+                file_log=self.get_log_file(self.file_list_mosa[0])
+                serial, dateUTC = get_time_from_log(file_log)
+                # create new fle log mosa
+                file_log_mosa = self.working_dir+os.sep+nom_base+"_log.txt"
+                with open(file_log_mosa, "w", encoding="utf-8") as f:
+                    f.write("Mosa date UTC : "+dateUTC[0]+"T"+dateUTC[1]+"\n")
+                    f.write("Centre xcc,ycc et rayon : "+ str(geom[0])+" "+ str(geom[1])+" " + str(geom[2])+" " +"\n")
+                    f.write("Coordonnees y1,y2 et x1,x2 disque : "+str(geom[3])+","+str(geom[4])+" "+str(geom[5])+","+str(geom[6])+"\n")
+            
             mosa_im=np.array(mosa_im, dtype='uint16')
             rotated_data = np.fliplr(np.rot90(mosa_im, 3))
             self.ui.mosa_image_view.setImage(rotated_data,autoRange=False, autoLevels=True)
@@ -3844,7 +3885,18 @@ class main_wnd_UI(QMainWindow) :
         except :
             #myinfos.ui.close()
             print(self.tr('Pas de fichier : ') + self.file_proc_log)
+    
+    def proc_dg (self) :
+        img=self.ui.proc_view.image
+        img=np.flipud(img)
+        self.ui.proc_view.setImage(img, autoLevels=False, autoRange=False)
+        self.img_proc=img
         
+    def proc_hb (self) :
+        img=self.ui.proc_view.image
+        img=np.fliplr(img)
+        self.ui.proc_view.setImage(img, autoLevels=False, autoRange=False)
+        self.img_proc=img
                         
             
     # tab grid
@@ -3983,8 +4035,8 @@ class main_wnd_UI(QMainWindow) :
                         if p.scene() is  self.ui.grid_view.getView().scene() :
                             self.ui.grid_view.view.removeItem(p)
                         
-                iw,ih = self.img_grid.shape[0], self.img_grid.shape[1]
-                
+                #iw,ih = self.img_grid.shape[0], self.img_grid.shape[1]
+                ih,iw = self.img_grid.shape[0], self.img_grid.shape[1]
                 try :
                     if self.ext_grid == "fits" :
                         xc = self.hdr['CENTER_X']
@@ -4257,18 +4309,37 @@ class main_wnd_UI(QMainWindow) :
                 w_w=w_h*2
             self.mygong.ui.resize(int(w_w), int(w_h))
             
-
             pixmap = QtGui.QPixmap()
             pixmap.loadFromData(img_data)
             lbl_w, lbl_h= (self.mygong.ui.gong_gongimg_lbl.width(),self.mygong.ui.gong_gongimg_lbl.height())
             pixmap.scaled(lbl_w, lbl_h,Qt.IgnoreAspectRatio)
             self.mygong.ui.gong_gongimg_lbl.setPixmap(pixmap)
             self.mygong.ui.gong_gongimg_lbl.adjustSize()
-            #web.open(r1+t)
+
             if os.path.exists(filename):
                 #web.open(filename)
                 #pixmap2 = QtGui.QPixmap(filename)
                 img_disk=cv2.imread(str(Path(filename)),cv2.IMREAD_UNCHANGED)
+                
+                if len(img_disk.shape) == 3 :
+                    # image couleur > passe en noir et blanc
+                    img_nb = np.copy(img_disk)
+                    
+                    # creer des images nb pour calculer la geometrie
+                    # Normaliser selon la profondeur
+                    if img_nb.dtype == np.uint8:
+                        img_nb = img_nb.astype(np.float32) / 255.0
+                    elif img_nb.dtype == np.uint16:
+                        img_nb = img_nb.astype(np.float32) / 65535.0
+                    else:
+                        raise TypeError("Type d'image non supporté (uint8 ou uint16 attendu)")
+                
+                    # Conversion standard vers niveaux de gris
+                    gray = 0.299 * img_nb[..., 0] + 0.587 * img_nb[..., 1] + 0.114 * img_nb[..., 2]
+                
+                    # Revenir sur 16 bits
+                    img_disk = np.clip(gray * 65535, 0, 65535).astype(np.uint16)
+                
                 ih, iw = img_disk.shape
                 if ih != iw :
                     # a priori image toujours plus large que haute...
@@ -4367,6 +4438,8 @@ class main_wnd_UI(QMainWindow) :
             exporter.parameters()['width'] = image.shape[1]
             # save to file
             exporter.export(file_name)
+            if file_exist(self.file_grid_log) :
+                shutil.copy (self.file_grid_log, os.path.splitext(file_name)[0]+"_log.txt")
     
     def grid_fili_cancel(self):
         for item in self.filigranes:
@@ -4584,10 +4657,11 @@ class main_wnd_UI(QMainWindow) :
             self.terre_list.append(earth_item)
             
             if len(self.img_grid.shape)==3 :
-                width,height,_ = self.img_grid.shape
+                #width,height,_ = self.img_grid.shape
+                height,width,_ = self.img_grid.shape
             else :
-                width,height = self.img_grid.shape
-                
+                #width,height = self.img_grid.shape
+                height,width = self.img_grid.shape
             # Position en bas à droite (avec marge) ou en haut à gauche
             margin = 100
             if self.ui.grid_terre_combo.currentIndex()== 0 : # haut
@@ -5601,7 +5675,63 @@ class main_wnd_UI(QMainWindow) :
         
             cv2.imwrite(file_name, img_uint16)
     
+   #--------------------------------------------------------------------------
+   # SpectroSolHub tab
+   #-------------------------------------------------------------------------- 
+    
+    
+    def hub_filter_changed(self, button, checked):        
+        filtres = [
+            b.text()
+            for b in self.ui.buttonGroup_4.buttons()
+            if b.isChecked()
+        ]
+        self.spectrosolhub_widget.select_filtered_images(filtres)
+    
+    def hub_select_all (self) :
+        self.spectrosolhub_widget.select_all_images()
+
         
+    def hub_deselect_all(self):
+        self.spectrosolhub_widget.deselect_all_images()
+        
+        
+    def hub_get_obs_list(self, working_dir) :
+        if working_dir != "" :
+            # construit dictionnaire de datae/heure observations et listes de fichiers
+            self.obs_time_list = self.get_date_list (working_dir)
+            
+            # rempli la hub_obs_list avec les dates et heures trouvées
+            self.ui.hub_obs_list.clear()
+            self.ui.hub_obs_files_list.clear()
+    
+            for heure in sorted(self.obs_time_list.keys()):
+                self.ui.hub_obs_list.addItem(heure)
+            self.ui.hub_current_dir_lbl.setText(working_dir)
+        # Connexion du signal itemClicked
+        self.ui.hub_obs_list.itemClicked.connect(self.on_hub_obs_item_clicked)
+    
+    def on_hub_obs_item_clicked(self, item):
+        
+        key = item.text()  # ici l'item affiché est la clé
+        self.ui.hub_obs_files_list.clear()
+        files = self.obs_time_list.get(key, [])
+        f = [self.short_name(ff) for ff in files]
+        self.ui.hub_obs_files_list.addItems(f)
+        files_from_time = [self.ui.hub_obs_files_list.item(i).text()
+         for i in range(self.ui.hub_obs_files_list.count())]
+        
+        # gallery refresh
+        self.spectrosolhub_widget.select_obs_files(files_from_time)
+        working_dir = self.spectrosolhub_widget.working_dir
+        self.ui.hub_current_dir_lbl.setText(working_dir)
+        
+    def on_hub_thumb_double_clicked(self, fname) :
+        working_dir = self.spectrosolhub_widget.working_dir
+        self.myimg_solo = img_wnd(working_dir)
+        self.display_image_solo(fname)
+        
+    
     #--------------------------------------------------------------------------
     # fonctions utilitaires
     #--------------------------------------------------------------------------
@@ -5795,6 +5925,76 @@ class main_wnd_UI(QMainWindow) :
           
         
         return file_proc_log
+    
+    def hub_get_log_file (self, file_proc, working_dir):
+        
+        #essai avec le nom du fichier entier car inti_partner crée des logs
+        file_proc_log =os.path.splitext(file_proc)[0]+"_log.txt"
+        if not os.path.exists(file_proc_log):
+            file_proc_log=''
+        
+        if file_proc_log == '' :
+            baseline = os.path.basename(get_baseline(os.path.splitext(file_proc)[0]))
+            
+            file_proc_log=working_dir+os.sep+baseline+"_log.txt"
+            
+            if not os.path.exists(file_proc_log):
+                # remonte d'un cran le chemin
+                parent_path = Path(working_dir).parent
+                file_proc_log=str(parent_path)+os.sep+baseline+"_log.txt"
+                
+                # on teste a nouveau
+                if not os.path.exists(file_proc_log):
+                    baseline = os.path.splitext(file_proc)[0]
+                    file_proc_log=baseline+"_log.txt"
+                # on teste encore
+                    if not os.path.exists(file_proc_log):
+                        # on ne remonte pas d'un cran cette fois, ce n'est pas un clahe
+                        #print(self.tr("fichier log non trouvé"))
+                        file_proc_log=''          
+            
+        return file_proc_log
+    
+    def get_date_list (self, working_dir):   
+        
+        # fullname car deux repertoires différents
+        files_nonclahe = [
+            os.path.join(working_dir, f)
+            for f in sorted(os.listdir(working_dir))
+            if f.lower().endswith(".png") and not f.startswith("st") and not f.startswith("cr")
+        ]
+        working_dir_clahe = os.path.join(working_dir, "Clahe")
+        files_clahe=[]
+        if os.path.isdir(working_dir_clahe):
+            files_clahe = [
+                os.path.join(working_dir_clahe, f)
+                for f in sorted(os.listdir(working_dir_clahe))
+                if f.lower().endswith(".png") and not f.startswith("st") and not f.startswith("cr")
+            ]
+        
+        files = files_nonclahe + files_clahe
+        files = sorted(files, key=lambda x: os.path.basename(x).lower())
+        
+        obs_list = {}
+
+        for full_filename in files:
+            f_log = self.hub_get_log_file(full_filename, working_dir)
+            if not f_log:
+                continue
+        
+            serial_time, date_obs = get_time_from_log(f_log)
+        
+            if not date_obs or not date_obs[1]:
+                continue
+        
+            heure = date_obs[1][:8]
+        
+            if heure not in obs_list:
+                obs_list[heure] = []
+        
+            obs_list[heure].append(full_filename.lower())                
+            
+        return obs_list
 
     def delete_serie (self, filename) :
         ref_path = Path(self.working_dir+os.sep+filename)
@@ -6258,7 +6458,8 @@ class Log(object):
 #-----------------------------------------------------------------------------
 # main App Qt  
 #-----------------------------------------------------------------------------  
-#----------------------------------------------------------------------------- 
+#-----------------------------------------------------------------------------
+
 
 def nomfich_incremental(dossier, base, ext):
     dossier = Path(dossier)
@@ -7242,6 +7443,7 @@ def get_baseline(f) :
     
     # f_short est le nom sans le chemin
     f_short=os.path.split(f)[1]
+    
     # f_path est le chemin
     f_path=os.path.split(f)[0]
     # on comence par enlever les eventuels préfixes
@@ -7251,20 +7453,21 @@ def get_baseline(f) :
     
     baseline = f
     
-    suffixes = ["_disk", "_protus","_clahe", "_dp*_cont","_dp*", "_cont",
-               "_doppler*", "_free", "_raw", "_color*", "_mix", "_inv",
+    suffixes = ["_disk*", "_protus*","_clahe*", "_dp*_cont","_dp*", "_cont*",
+               "_doppler*", "_free*", "_raw", "_color*", "_mix*", "_inv",
                "_recon","_dp*recon"]
     
+    baselines = []
     for suffixe in suffixes :
         # On transforme le motif wildcard en regex : "*" → ".*"
         motif = re.escape(suffixe).replace("\\*", ".*") + r"$"
         m = re.match(f"^(.*){motif}", f)
         if m:
-            baseline =m.group(1)
-            #print("baseline "+str(baseline))
-            return baseline
-            
+            baselines.append( m.group(1))
     
+    if len(baselines) != 0 :
+        baseline = min(baselines, key=len)
+            
     return baseline
     
     # il faudra aussi tester si le fichier n'existe pas de garder le nom en entier
@@ -7305,6 +7508,7 @@ def get_time_from_log (fich):
         if fich != '' :
             print('Erreur fichier : ', fich)
         serial_datetime = 0
+        sc =[]
     
     return serial_datetime, sc
 
@@ -7347,6 +7551,8 @@ def get_geom_from_log (flog) :
         cx=cy=sr=ax1=ax2=ay1=ay2=0
         
     return cx,cy,sr,ay1,ay2,ax1,ax2
+
+
 
 def download_srs_archive(dt):
     try :

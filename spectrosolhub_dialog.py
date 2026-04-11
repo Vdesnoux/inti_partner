@@ -17,7 +17,7 @@ import numpy as np
 from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton,
     QLineEdit, QTextEdit, QProgressBar, QCheckBox, QScrollArea,
-    QWidget, QMessageBox, QFrame, QComboBox
+    QWidget, QMessageBox, QFrame, QComboBox, QFileDialog, QApplication
 )
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QPixmap, QImage
@@ -129,13 +129,26 @@ SPECTRAL_LINES = {
     "H-beta":               4861.34,
     "Magnesium (b1)":       5183.62,
     "Iron (E2)":            5270.39,
+    "Fe XIV (Cor)":         5302.86,
     "Mercury (e)":          5460.73,
     "Helium (D3)":          5875.62,
     "Iron (Fe I)":          5883.8166,
     "Sodium (D2)":          5889.95,
     "Sodium (D1)":          5895.92,
+    "Fe I (Zeeman)":        6302.49,  
     "Other":                None,
 }
+
+SUNSCAN_INSTRU = {
+    "telescope": "Sunscan lens",
+    "camera": "SONY IMX477",
+    "mount": "Sunscan azim",
+    "focal_length": "200",
+    "aperture": "25",
+    "pixel_size": "3.1",
+    "binning": "1",
+    "erf": "ND0.9"
+    }
 
 
 def _guess_spectral_line(filename):
@@ -157,6 +170,7 @@ def _guess_spectral_line(filename):
         "_magnesium": "Magnesium (b1)",
         "_hbeta": "H-beta",
         "_cont": "Other",
+        "_free":"Other"
     }
     for key, line in mapping.items():
         if key in fn:
@@ -235,8 +249,8 @@ def _float_or_none(text):
 
 def _image_kind_from_filename(filename):
     """Determine image kind from filename suffix.
-    Used for filtering (e.g. excluding RAW) and as suffix for the
-    API imageKind (e.g. INTI_PARTNER_DISK, INTI_PARTNER_CLAHE)."""
+    Used only for filtering (e.g. excluding RAW).
+    The imageKind sent to the API is always INTI_PARTNER."""
     fn = os.path.basename(filename).lower()
     if "_disk" in fn:
         return "DISK"
@@ -256,6 +270,8 @@ def _image_kind_from_filename(filename):
         return "RAW"
     elif "_mix" in fn:
         return "MIXED"
+    elif "_inv" in fn:
+        return "INV"
     return "OTHER"
 
 
@@ -329,7 +345,8 @@ class UploadWorker(QThread):
             for i, file_path in enumerate(self.image_files):
                 jpeg_bytes = _image_to_jpeg_bytes(file_path)
                 title = os.path.splitext(os.path.basename(file_path))[0]
-                image_kind = "INTI_PARTNER_" + _image_kind_from_filename(file_path)
+                sub_kind =  _image_kind_from_filename(file_path)
+                image_kind = "INTI_PARTNER_"+sub_kind
                 metadata = self.build_metadata_func(file_path)
                 metadata_json = json.dumps(metadata) if metadata else None
 
@@ -352,6 +369,131 @@ class UploadWorker(QThread):
             self.error.emit(str(e))
 
 
+# ----------------------------------------------------------------------------
+# widget selector spectral line
+# ----------------------------------------------------------------------------
+
+# Sous-classe pour bloquer la roulette
+class NoWheelComboBox(QComboBox):
+    def wheelEvent(self, event):
+        event.ignore()
+
+class SpectralSelector(QWidget):
+    def __init__(self, initial=None):
+        super().__init__()
+
+        layout = QHBoxLayout(self)
+
+        self.combo = NoWheelComboBox()
+        self.edit = QLineEdit()
+        
+        self.combo.setStyleSheet("""
+            QComboBox {
+                color: black;
+                background-color: ivory;
+            }
+            """)
+        self.edit.setStyleSheet("""
+            QLineEdit {
+                color: black;
+                background-color: ivory;
+            }
+            """)
+        self.edit.setMinimumWidth(60)
+
+        layout.addWidget(self.combo)
+        layout.addWidget(self.edit)
+
+        for name, value in SPECTRAL_LINES.items():
+            self.combo.addItem(name, value)
+
+        self.combo.currentIndexChanged.connect(self.on_combo_changed)
+        self.edit.editingFinished.connect(self.on_edit_changed)
+
+        # initialisation
+        self.set_value(initial if initial is not None else "H-alpha")
+
+    def set_value(self, value):
+        """value peut être un nom (str) ou un float"""
+
+        # --- cas nom ---
+        if isinstance(value, str):
+            index = self.combo.findText(value)
+            if index >= 0:
+                self.combo.setCurrentIndex(index)
+                self.on_combo_changed()
+                return
+
+        # --- cas numérique ---
+        try:
+            val = float(value)
+        except (TypeError, ValueError):
+            return
+
+        # chercher correspondance
+        for i in range(self.combo.count()):
+            data = self.combo.itemData(i)
+            if data is not None and abs(data - val) < 1e-3:
+                self.combo.setCurrentIndex(i)
+                self.on_combo_changed() 
+                return
+
+        # sinon → Other + valeur
+        index_other = self.combo.findText("Other")
+        if index_other >= 0:
+            self.combo.setCurrentIndex(index_other)
+        self.edit.setText(f"{val:.4f}")
+
+    def on_combo_changed(self):
+        value = self.combo.currentData()
+        if value is None:
+            self.edit.clear()
+        else:
+            self.edit.setText(f"{value:.4f}")
+
+    def on_edit_changed(self):
+        text = self.edit.text()
+        try:
+            value = float(text)
+        except ValueError:
+            return
+
+        for i in range(self.combo.count()):
+            data = self.combo.itemData(i)
+            if data is not None and abs(data - value) < 1e-3:
+                self.combo.setCurrentIndex(i)
+                return
+
+        index_other = self.combo.findText("Other")
+        if index_other >= 0:
+            self.combo.setCurrentIndex(index_other)
+            
+    def get_name(self):
+        return self.combo.currentText()
+    
+    def get_value(self):
+        try:
+            return float(self.edit.text())
+        except ValueError:
+            return None
+
+# ---------------------------------------------------------------------------
+# specifique label double-clickable
+# ---------------------------------------------------------------------------
+
+class ThumbnailLabel(QLabel):
+    doubleClicked = Signal(str)  # on envoie le filename
+
+    def __init__(self, filename="", parent=None):
+        super().__init__(parent)
+        self.filename = filename
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.doubleClicked.emit(self.filename)
+        super().mouseDoubleClickEvent(event)
+
+
 # ---------------------------------------------------------------------------
 # Wizard Widget (embeddable as a tab or in a dialog)
 # ---------------------------------------------------------------------------
@@ -359,6 +501,9 @@ class UploadWorker(QThread):
 class SpectroSolHubWidget(QWidget):
     """3-step wizard for submitting images to SpectroSolHub.
     Can be embedded as a tab in the main window."""
+    
+    hub_change_dir = Signal(str)
+    thumbnailDoubleClicked = Signal(str)
 
     def __init__(self, parent=None, working_dir="", get_geom_func=None,
                  get_log_file_func=None, read_fits_func=None, langue='Fr',
@@ -378,7 +523,9 @@ class SpectroSolHubWidget(QWidget):
         self.selected_files = []
         self.image_checkboxes = []
         self.image_files_list = []
+        self.spectral_widgets=[]
         self._inti_version = None  # (name, version) from FITS CREATOR header
+        self.filtres_preset=[]
 
         # Load persisted token
         self._load_config()
@@ -389,11 +536,16 @@ class SpectroSolHubWidget(QWidget):
     def set_working_dir(self, working_dir):
         """Update the working directory (called when the user changes directory)."""
         self.working_dir = working_dir
-        # Reset image gallery so it reloads on next visit to step 2
+        
+        ### Reset image gallery so it reloads on next visit to step 2
+        # n efface pas le step_widgets mais met a jour la gallery
         if 2 in self._step_widgets:
-            del self._step_widgets[2]
-            self.image_checkboxes.clear()
-            self.image_files_list.clear()
+            #del self._step_widgets[2]
+            #self.image_checkboxes.clear()
+            #self.image_files_list.clear()
+            self.nom_dir_lbl.setText(working_dir)
+            self._populate_gallery()
+            #self.hub_change_dir.emit(working_dir)
 
     # ----- Config persistence -----
 
@@ -461,8 +613,11 @@ class SpectroSolHubWidget(QWidget):
             "binning": self.binning_field.text().strip(),
             "erf": self.erf_field.text().strip(),
         }
-        self._save_config()
-
+        if self.shg_combo.currentText() != 'Sunscan' :
+            self._save_config()
+        else :
+            print("sunscan - no save")
+            
     def _clear_token(self):
         self.token = None
         self._save_config()
@@ -570,6 +725,9 @@ class SpectroSolHubWidget(QWidget):
                 QMessageBox.warning(self, "SpectroSolHub",
                                     self.tr("Sélectionnez au moins une image."))
                 return False
+            else :
+                self.myselection, self.mylines, self.mywaves = self._get_selected_files()
+                
         elif self.current_step == 3:
             if not self.title_field.text().strip():
                 QMessageBox.warning(self, "SpectroSolHub",
@@ -789,6 +947,17 @@ class SpectroSolHubWidget(QWidget):
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
+        select_dir_row = QHBoxLayout()
+        select_dir_btn = QPushButton(self.tr("Répertoire"))
+        select_dir_btn.clicked.connect(self._select_dir)
+        self.nom_dir_lbl = QLabel(" ")
+        self.nom_dir_lbl.setStyleSheet("background-color: grey")
+        if self.working_dir !='' :
+            self.nom_dir_lbl.setText(self.working_dir)
+        select_dir_row.addWidget(select_dir_btn)
+        select_dir_row.addWidget(self.nom_dir_lbl, 1) # can adjust to layout
+        layout.addLayout(select_dir_row)
+
         title = QLabel(self.tr("Sélection des images"))
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
         layout.addWidget(title)
@@ -799,16 +968,21 @@ class SpectroSolHubWidget(QWidget):
         instruction.setWordWrap(True)
         layout.addWidget(instruction)
 
+        """
         # Select all / Deselect all
         btn_row = QHBoxLayout()
         select_all_btn = QPushButton(self.tr("Tout sélectionner"))
-        select_all_btn.clicked.connect(self._select_all_images)
+        select_all_btn.clicked.connect(self.select_all_images)
         deselect_all_btn = QPushButton(self.tr("Tout désélectionner"))
-        deselect_all_btn.clicked.connect(self._deselect_all_images)
+        deselect_all_btn.clicked.connect(self.deselect_all_images)
+        #refresh_btn = QPushButton(self.tr("Rafraichir"))
+        #refresh_btn.clicked.connect(self._refresh_working_dir)
         btn_row.addWidget(select_all_btn)
         btn_row.addWidget(deselect_all_btn)
+        #btn_row.addWidget(refresh_btn)
         btn_row.addStretch()
         layout.addLayout(btn_row)
+        """
 
         # Scrollable gallery
         scroll = QScrollArea()
@@ -818,10 +992,26 @@ class SpectroSolHubWidget(QWidget):
         self.gallery_layout.setSpacing(8)
         scroll.setWidget(self.gallery_widget)
         layout.addWidget(scroll, 1)
+        self.scroll_area = scroll
 
         return widget
 
+    def _refresh_working_dir (self) :
+        self._populate_gallery()
+        
+    def _select_dir (self) :
+        new_dir = str(QFileDialog.getExistingDirectory(self, self.tr("Sélection répertoire"), self.working_dir))
+        if new_dir : #si ne retourne pas une chaine vide
+            self.working_dir=new_dir
+            self.nom_dir_lbl.setText(new_dir)
+            self._populate_gallery()
+            self.hub_change_dir.emit(self.working_dir)
+
     def _populate_gallery(self):
+        
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        # QApplication.restoreOverrideCursor()
+        
         # Clear existing
         while self.gallery_layout.count():
             item = self.gallery_layout.takeAt(0)
@@ -830,26 +1020,52 @@ class SpectroSolHubWidget(QWidget):
                 w.setParent(None)
         self.image_checkboxes.clear()
         self.image_files_list.clear()
-
+        self.spectral_widgets.clear()
+        
+        
         if not self.working_dir or not os.path.isdir(self.working_dir):
             return
-
+        
+        self.nom_dir_lbl.setText(self.working_dir)
         # Find eligible PNG images in working directory
         excluded_kinds = {"RAW"}
-        preselected_kinds = {"DISK", "CLAHE", "MIXED"}
+        if self.filtres_preset :
+            preselected_kinds = set(self.filtres_preset)
+        else :
+            #preselected_kinds = {"PROTUS", "CLAHE"}
+            # NEW on preselectionne aucun fichier    
+            preselected_kinds = {}
 
-        files = sorted([
-            f for f in os.listdir(self.working_dir)
-            if f.lower().endswith(".png") and not f.startswith("st")
-        ])
-
+        # fullname car deux repertoires différents
+        files_nonclahe = [
+            os.path.join(self.working_dir, f)
+            for f in sorted(os.listdir(self.working_dir))
+            if f.lower().endswith(".png") and not f.startswith("st") and not f.startswith("cr")
+        ]
+        working_dir_clahe = os.path.join(self.working_dir, "Clahe")
+        files_clahe=[]
+        if os.path.isdir(working_dir_clahe):
+            files_clahe = [
+                os.path.join(working_dir_clahe, f)
+                for f in sorted(os.listdir(working_dir_clahe))
+                if f.lower().endswith(".png") and not f.startswith("st") and not f.startswith("cr")
+            ]
+        
+        files = files_nonclahe + files_clahe
+        files = sorted(files, key=lambda x: os.path.basename(x).lower())
+        
+        
         col = 0
         row = 0
         cols_per_row = 4
 
-        for filename in files:
-            full_path = os.path.join(self.working_dir, filename)
+        for full_filename in files:
+            #full_path = os.path.join(self.working_dir, filename)
+            full_path= full_filename
+            filename = os.path.basename(full_filename).lower()
             kind = _image_kind_from_filename(filename)
+            myline, mywave = _guess_spectral_line(filename)
+            
             if kind in excluded_kinds:
                 continue
 
@@ -860,7 +1076,7 @@ class SpectroSolHubWidget(QWidget):
             card.setFrameShape(QFrame.Shape.Box)
             card.setStyleSheet(
                 "QFrame { border: 1px solid lightgray; border-radius: 4px; "
-                "background-color: white; padding: 4px; }"
+                "background-color: ivory; padding: 4px; }"
             )
             card_layout = QVBoxLayout(card)
             card_layout.setSpacing(2)
@@ -868,48 +1084,116 @@ class SpectroSolHubWidget(QWidget):
 
             # Thumbnail
             thumb = _make_thumbnail(full_path, 120)
-            thumb_label = QLabel()
+            thumb_label = ThumbnailLabel(filename = full_path)
             if thumb:
                 thumb_label.setPixmap(thumb)
             else:
                 thumb_label.setText("?")
             thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             thumb_label.setFixedSize(130, 130)
-            card_layout.addWidget(thumb_label)
+            thumb_label.doubleClicked.connect(self._on_thumb_double_clicked)
+            card_layout.addWidget(thumb_label, alignment=Qt.AlignmentFlag.AlignHCenter)
 
             # Checkbox + name
-            cb = QCheckBox(filename[:30])
+            cb = QCheckBox(filename[:35])
+            cb.setStyleSheet("color: black;")
             cb.setToolTip(filename)
             cb.setChecked(kind in preselected_kinds)
             card_layout.addWidget(cb)
             self.image_checkboxes.append(cb)
+            
+            # combobox + line edit spectral line            
+            spectral_selector = SpectralSelector(initial = myline)
+            self.spectral_widgets.append(spectral_selector)
+            card_layout.addWidget(spectral_selector)
+            
 
             self.gallery_layout.addWidget(card, row, col)
             col += 1
             if col >= cols_per_row:
                 col = 0
                 row += 1
+        
+        QApplication.restoreOverrideCursor()
 
-    def _select_all_images(self):
+    def _on_thumb_double_clicked(self, fname):
+        self.thumbnailDoubleClicked.emit(fname)
+
+
+    def select_filtered_images (self, filtres):
+        self.deselect_all_images()
+        self.filtres_preset = [f.upper() for f in filtres]
+        if self.current_step == 2 :
+            for cb in self.image_checkboxes:
+                for filtre in filtres :
+                    #print(filtre, cb.text())
+                    if filtre.lower() in cb.text() :
+                        cb.setChecked(True)
+                        #print("check !")
+                
+
+    def select_all_images(self):
         for cb in self.image_checkboxes:
             cb.setChecked(True)
 
-    def _deselect_all_images(self):
+    def deselect_all_images(self):
         for cb in self.image_checkboxes:
             cb.setChecked(False)
-
+    
+    def select_obs_files(self, files_from_time):       
+        if 2 in self._step_widgets:
+            matching_cards = []
+            
+            for row in range(self.gallery_layout.rowCount()):
+                for col in range(self.gallery_layout.columnCount()):
+                    item = self.gallery_layout.itemAtPosition(row, col)
+                    if item is None:
+                        continue
+            
+                    card = item.widget()
+                    if card is None:
+                        continue
+                    # reset couleur de fond 
+                    card.setStyleSheet("background-color: Ivory") 
+                    # récupérer la checkbox de la card
+                    cb_list = card.findChildren(QCheckBox)
+                    if not cb_list:
+                        continue
+            
+                    cb = cb_list[0]  # chaque card a exactement une checkbox
+                    if cb.text() in files_from_time:
+                        matching_cards.append(card)
+            
+            # aller a la ligne du premier fichier
+            if matching_cards:
+                self.scroll_area.ensureWidgetVisible(matching_cards[0])
+            
+            # --- changer le fond des cards correspondantes ---
+            for card in matching_cards:
+                card.setStyleSheet("background-color: PaleTurquoise") 
+   
     def _get_selected_files(self):
         selected = []
+        lines=[]
+        waves=[]        
         for i, cb in enumerate(self.image_checkboxes):
             if cb.isChecked():
                 selected.append(self.image_files_list[i])
-        return selected
+                line = self.spectral_widgets[i].get_name()
+                wave = self.spectral_widgets[i].get_value()
+                lines.append(line)
+                waves.append(wave)
+                
+        if not selected:
+            return None
+        return selected, lines, waves
 
     # ===================================================================
     # STEP 3: Session Metadata
     # ===================================================================
 
     def _create_step3_metadata(self):
+        
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
@@ -925,7 +1209,7 @@ class SpectroSolHubWidget(QWidget):
 
         grid = QGridLayout()
         grid.setHorizontalSpacing(10)
-        grid.setVerticalSpacing(8)
+        grid.setVerticalSpacing(2)
         row = 0
 
         grid.addWidget(QLabel(self.tr("Titre :")), row, 0)
@@ -1081,6 +1365,7 @@ class SpectroSolHubWidget(QWidget):
 
         layout.addLayout(grid)
         layout.addStretch()
+
         return widget
 
     def _on_spectral_line_changed(self, line_name):
@@ -1093,6 +1378,22 @@ class SpectroSolHubWidget(QWidget):
         if shg:
             self.slit_width_field.setText(str(shg["slitWidthMicrons"]))
             self.slit_height_field.setText(str(shg["slitHeightMillimeters"]))
+        
+        # Restore persisted equipment (only if fields are empty)
+        for field, key in [
+            (self.telescope_field, "telescope"),
+            (self.camera_field, "camera"),
+            (self.mount_field, "mount"),
+            (self.focal_length_field, "focal_length"),
+            (self.aperture_field, "aperture"),
+            (self.pixel_size_field, "pixel_size"),
+            (self.binning_field, "binning"),
+            (self.erf_field, "erf"),
+        ]:
+            if shg_name == "Sunscan" :
+                field.setText(SUNSCAN_INSTRU.get(key,""))
+            else :
+                field.setText(self._persisted_equipment.get(key,""))
 
     def _find_companion_fits(self, file_path):
         """Find a companion FITS file for a PNG/JPG image.
@@ -1155,15 +1456,20 @@ class SpectroSolHubWidget(QWidget):
         return None
 
     def _prefill_metadata(self):
-        selected = self._get_selected_files()
+        #selected = self._get_selected_files()
+        selected = self.myselection
+        
+        #wavelength=self.mywaves[0]
         if not selected:
             return
-
+        
+        line = self.mylines[0]
+            
         # Try to detect INTI version from FITS headers
         self._inti_version = self._extract_inti_version(selected)
 
         # Guess spectral line from filenames
-        line, wavelength = _guess_spectral_line(selected[0])
+        #line, wavelength = _guess_spectral_line(selected[0])
         idx = self.spectral_line_combo.findText(line)
         if idx >= 0:
             self.spectral_line_combo.setCurrentIndex(idx)
@@ -1204,6 +1510,8 @@ class SpectroSolHubWidget(QWidget):
             self._on_shg_changed(self.shg_combo.currentText())
         if persisted_sh:
             self.slit_height_field.setText(persisted_sh)
+        if shg_name == "Sunscan" :
+            field.setText(SUNSCAN_INSTRU.get(key,""))
 
     def _extract_date(self, filepath):
         """Try to extract observation date from FITS header, log file, or filename.
@@ -1258,7 +1566,7 @@ class SpectroSolHubWidget(QWidget):
         self.next_btn.setText(self.tr("Envoi en cours..."))
         self.progress_bar.setRange(0, 0)  # indeterminate
 
-        selected_files = self._get_selected_files()
+        selected_files,_,_ = self._get_selected_files()
         session_request = self._build_session_request()
 
         self._upload_worker = UploadWorker(
@@ -1446,8 +1754,13 @@ class SpectroSolHubWidget(QWidget):
             except Exception:
                 pass
 
-        # Spectral line info (using JSol'Ex SpectralRay labels)
-        line, wavelength = _guess_spectral_line(file_path)
+        # Spectral line info (using JSol'Ex SpectralRay labels modified by inti_partner)
+        #line, wavelength = _guess_spectral_line(file_path) > obsolete
+        idx = self.myselection.index(file_path)
+        line = self.mylines[idx]
+        wavelength = self.mywaves[idx]
+        print(line+" , "+str(wavelength))
+        
         if wavelength:
             metadata["wavelengthAngstroms"] = wavelength
         metadata["spectralLine"] = line
