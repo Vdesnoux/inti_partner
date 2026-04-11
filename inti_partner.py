@@ -742,8 +742,11 @@ class main_wnd_UI(QMainWindow) :
                 self.ui.select_pattern_combo.setCurrentIndex(0)
         
         # solhub
-        if index == 12 :
+        if index == 11 :
+            #print("hub")
             self.ui.panelWidget.setCurrentIndex(11)
+            self.hub_get_obs_list(self.working_dir)
+            #print(self.working_dir)
                 
 
 
