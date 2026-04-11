@@ -1766,4 +1766,299 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <translation>Keywords missing in fits header</translation>
     </message>
 </context>
+<context>
+    <name>SpectroSolHubWidget</name>
+    <message>
+        <source>Précédent</source>
+        <translation>Previous</translation>
+    </message>
+    <message>
+        <source>Suivant</source>
+        <translation>Next</translation>
+    </message>
+    <message>
+        <source>Envoyer</source>
+        <translation>Submit images</translation>
+    </message>
+    <message>
+        <source>Étape {0} / {1}</source>
+        <translation>Step {0} of {1}</translation>
+    </message>
+    <message>
+        <source>Veuillez vous connecter d&apos;abord.</source>
+        <translation>Please log in first.</translation>
+    </message>
+    <message>
+        <source>Sélectionnez au moins une image.</source>
+        <translation>Please select at least one image.</translation>
+    </message>
+    <message>
+        <source>Le titre de la session est requis.</source>
+        <translation>Session title is required.</translation>
+    </message>
+    <message>
+        <source>La date d&apos;observation est requise.
+Aucune date n&apos;a pu être extraite des fichiers.</source>
+        <translation>Observation date is required.
+No date could be extracted from the files.</translation>
+    </message>
+    <message>
+        <source>Télescope</source>
+        <translation>Telescope</translation>
+    </message>
+    <message>
+        <source>Caméra</source>
+        <translation>Camera</translation>
+    </message>
+    <message>
+        <source>Monture</source>
+        <translation>Mount</translation>
+    </message>
+    <message>
+        <source>{0} est requis.</source>
+        <translation>{0} is required.</translation>
+    </message>
+    <message>
+        <source>{0} doit être au format &quot;Marque Modèle&quot; (ex: ZWO ASI174MM).</source>
+        <translation>{0} must be in &quot;Brand Model&quot; format (e.g. ZWO ASI174MM).</translation>
+    </message>
+    <message>
+        <source>Connexion à SpectroSolHub</source>
+        <translation>Log in to SpectroSolHub</translation>
+    </message>
+    <message>
+        <source>Connectez-vous à votre compte SpectroSolHub pour partager vos images.
+Si vous n&apos;avez pas de compte, créez-en un sur spectrosolhub.com.</source>
+        <translation>Log in to your SpectroSolHub account to share your images.
+If you don&apos;t have an account, create one at spectrosolhub.com.</translation>
+    </message>
+    <message>
+        <source>Utilisateur :</source>
+        <translation>Username:</translation>
+    </message>
+    <message>
+        <source>Nom d&apos;utilisateur</source>
+        <translation>Username</translation>
+    </message>
+    <message>
+        <source>Mot de passe :</source>
+        <translation>Password:</translation>
+    </message>
+    <message>
+        <source>Code TOTP :</source>
+        <translation>TOTP Code:</translation>
+    </message>
+    <message>
+        <source>Optionnel</source>
+        <translation>Optional</translation>
+    </message>
+    <message>
+        <source>Se connecter</source>
+        <translation>Login</translation>
+    </message>
+    <message>
+        <source>Connecté à SpectroSolHub</source>
+        <translation>Connected to SpectroSolHub</translation>
+    </message>
+    <message>
+        <source>Se déconnecter</source>
+        <translation>Disconnect</translation>
+    </message>
+    <message>
+        <source>Créer un compte</source>
+        <translation>Create an account</translation>
+    </message>
+    <message>
+        <source>Vérification du token...</source>
+        <translation>Verifying token...</translation>
+    </message>
+    <message>
+        <source>Token expiré, veuillez vous reconnecter.</source>
+        <translation>Token expired, please log in again.</translation>
+    </message>
+    <message>
+        <source>Saisissez vos identifiants.</source>
+        <translation>Please enter your credentials.</translation>
+    </message>
+    <message>
+        <source>Connexion en cours...</source>
+        <translation>Logging in...</translation>
+    </message>
+    <message>
+        <source>Code TOTP requis.</source>
+        <translation>TOTP code required.</translation>
+    </message>
+    <message>
+        <source>Identifiants invalides.</source>
+        <translation>Invalid credentials.</translation>
+    </message>
+    <message>
+        <source>Erreur : </source>
+        <translation>Error: </translation>
+    </message>
+    <message>
+        <source>Sélection des images</source>
+        <translation>Image Selection</translation>
+    </message>
+    <message>
+        <source>Sélectionnez les images à envoyer à SpectroSolHub.</source>
+        <translation>Select the images to submit to SpectroSolHub.</translation>
+    </message>
+    <message>
+        <source>Tout sélectionner</source>
+        <translation>Select All</translation>
+    </message>
+    <message>
+        <source>Tout désélectionner</source>
+        <translation>Deselect All</translation>
+    </message>
+    <message>
+        <source>Métadonnées de la session</source>
+        <translation>Session Information</translation>
+    </message>
+    <message>
+        <source>Renseignez les informations sur votre observation.</source>
+        <translation>Enter the details of your observation.</translation>
+    </message>
+    <message>
+        <source>Titre :</source>
+        <translation>Title:</translation>
+    </message>
+    <message>
+        <source>Date d&apos;observation :</source>
+        <translation>Observation Date:</translation>
+    </message>
+    <message>
+        <source>Raie spectrale :</source>
+        <translation>Spectral Line:</translation>
+    </message>
+    <message>
+        <source>Équipement</source>
+        <translation>Equipment</translation>
+    </message>
+    <message>
+        <source>Spectro :</source>
+        <translation>Spectro:</translation>
+    </message>
+    <message>
+        <source>Largeur (μm) :</source>
+        <translation>Width (μm):</translation>
+    </message>
+    <message>
+        <source>Hauteur (mm) :</source>
+        <translation>Height (mm):</translation>
+    </message>
+    <message>
+        <source>Fente :</source>
+        <translation>Slit:</translation>
+    </message>
+    <message>
+        <source>Télescope :</source>
+        <translation>Telescope:</translation>
+    </message>
+    <message>
+        <source>Marque Modèle (ex: Takahashi FSQ-106ED)</source>
+        <translation>Brand Model (e.g. Takahashi FSQ-106ED)</translation>
+    </message>
+    <message>
+        <source>Focale (mm) :</source>
+        <translation>Focal length (mm):</translation>
+    </message>
+    <message>
+        <source>Ouverture (mm) :</source>
+        <translation>Aperture (mm):</translation>
+    </message>
+    <message>
+        <source>Caméra :</source>
+        <translation>Camera:</translation>
+    </message>
+    <message>
+        <source>Marque Modèle (ex: ZWO ASI174MM)</source>
+        <translation>Brand Model (e.g. ZWO ASI174MM)</translation>
+    </message>
+    <message>
+        <source>Pixel (μm) :</source>
+        <translation>Pixel (μm):</translation>
+    </message>
+    <message>
+        <source>Monture :</source>
+        <translation>Mount:</translation>
+    </message>
+    <message>
+        <source>Marque Modèle (ex: SkyWatcher EQ6-R)</source>
+        <translation>Brand Model (e.g. SkyWatcher EQ6-R)</translation>
+    </message>
+    <message>
+        <source>Observation</source>
+        <translation>Observation</translation>
+    </message>
+    <message>
+        <source>Binning :</source>
+        <translation>Binning:</translation>
+    </message>
+    <message>
+        <source>Filtre ERF :</source>
+        <translation>ERF Filter:</translation>
+    </message>
+    <message>
+        <source>ex: ND 16</source>
+        <translation>e.g. ND 16</translation>
+    </message>
+    <message>
+        <source>Notes :</source>
+        <translation>Notes:</translation>
+    </message>
+    <message>
+        <source>Vous pouvez ajouter des notes sur votre session d&apos;observation ici. Les notes peuvent contenir des hashtags (ex. #stack, #flare, ...) que vous pouvez utiliser pour classer vos observations.</source>
+        <translation>You can add notes about your observation session here. The notes may contain hashtags (e.g. #stack, #flare, ...) which you can use to classify your observations.</translation>
+    </message>
+    <message>
+        <source>Nom :</source>
+        <translation>Name:</translation>
+    </message>
+    <message>
+        <source>ex: Fe XIV 5303</source>
+        <translation>e.g. Fe XIV 5303</translation>
+    </message>
+    <message>
+        <source>Longueur d&apos;onde (Å) :</source>
+        <translation>Wavelength (Å):</translation>
+    </message>
+    <message>
+        <source>ex: 5303.0</source>
+        <translation>e.g. 5303.0</translation>
+    </message>
+    <message>
+        <source>Le nom de la raie spectrale est requis.</source>
+        <translation>Spectral line name is required.</translation>
+    </message>
+    <message>
+        <source>La longueur d&apos;onde (en Å) est requise.</source>
+        <translation>Wavelength (in Å) is required.</translation>
+    </message>
+    <message>
+        <source>Publier immédiatement</source>
+        <translation>Publish immediately</translation>
+    </message>
+    <message>
+        <source>Envoi en cours...</source>
+        <translation>Uploading...</translation>
+    </message>
+    <message>
+        <source>Envoi image {0}/{1}...</source>
+        <translation>Uploading image {0} of {1}...</translation>
+    </message>
+    <message>
+        <source>Envoyé !</source>
+        <translation>Submitted!</translation>
+    </message>
+    <message>
+        <source>Images envoyées avec succès !</source>
+        <translation>Images submitted successfully!</translation>
+    </message>
+    <message>
+        <source>Erreur lors de l&apos;envoi : </source>
+        <translation>Upload failed: </translation>
+    </message>
+</context>
 </TS>
